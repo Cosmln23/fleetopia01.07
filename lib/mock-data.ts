@@ -1,4 +1,4 @@
-import { CargoOffer, CargoStatus, CargoType, UrgencyLevel } from './types'
+import { CargoOffer, CargoStatus, CargoType, UrgencyLevel, OfferRequest } from './types'
 
 export const mockCargoOffers: CargoOffer[] = [
   {
@@ -171,6 +171,24 @@ export function getStatusColor(status: CargoStatus): string {
   }
 }
 
+// Helper function to get status background + text color (PĂSTRÂND CULORILE ORIGINALE)
+export function getStatusBadgeStyles(status: CargoStatus): string {
+  switch (status) {
+    case CargoStatus.NEW:
+      return 'bg-blue-400 text-white font-bold'        // Albastru original + text alb
+    case CargoStatus.OPEN:
+      return 'bg-green-400 text-black font-bold'       // Verde original + text negru  
+    case CargoStatus.TAKEN:
+      return 'bg-yellow-400 text-black font-bold'      // Galben original + text negru
+    case CargoStatus.IN_PROGRESS:
+      return 'bg-orange-400 text-black font-bold'      // Portocaliu original + text negru
+    case CargoStatus.COMPLETED:
+      return 'bg-gray-400 text-white font-bold'        // Gri original + text alb
+    default:
+      return 'bg-[#363636] text-white'
+  }
+}
+
 // Helper function to get urgency color
 export function getUrgencyColor(urgency: UrgencyLevel): string {
   switch (urgency) {
@@ -184,5 +202,94 @@ export function getUrgencyColor(urgency: UrgencyLevel): string {
       return 'text-red-400'
     default:
       return 'text-white'
+  }
+}
+
+// Helper function to get urgency background + text color (PĂSTRÂND CULORILE ORIGINALE)
+export function getUrgencyBadgeStyles(urgency: UrgencyLevel): string {
+  switch (urgency) {
+    case UrgencyLevel.LOW:
+      return 'bg-green-400 text-black font-bold'       // Verde original + text negru
+    case UrgencyLevel.MEDIUM:
+      return 'bg-yellow-400 text-black font-bold'      // Galben original + text negru
+    case UrgencyLevel.HIGH:
+      return 'bg-orange-400 text-black font-bold'      // Portocaliu original + text negru
+    case UrgencyLevel.URGENT:
+      return 'bg-red-400 text-white font-bold'         // Roșu original + text alb
+    default:
+      return 'bg-[#363636] text-white'
+  }
+}
+
+// Mock Offer Requests for testing bidding system
+export const mockOfferRequests: OfferRequest[] = [
+  {
+    id: 'req_001',
+    cargoOfferId: '123456',
+    transporterId: 'trans_001',
+    proposedPrice: 850,
+    message: 'I can deliver this cargo with special handling for electronics. 15+ years experience in tech transport.',
+    status: 'PENDING',
+    createdAt: '2024-07-01T08:30:00Z'
+  },
+  {
+    id: 'req_002', 
+    cargoOfferId: '123456',
+    transporterId: 'trans_002',
+    proposedPrice: 920,
+    message: 'Express delivery available. Temperature controlled truck with GPS tracking.',
+    status: 'PENDING',
+    createdAt: '2024-07-01T10:15:00Z'
+  },
+  {
+    id: 'req_003',
+    cargoOfferId: '789012',
+    transporterId: 'trans_003', 
+    proposedPrice: 1650,
+    message: 'Specialized in automotive parts transport. Secure loading systems.',
+    status: 'ACCEPTED',
+    createdAt: '2024-06-26T14:20:00Z'
+  },
+  {
+    id: 'req_004',
+    cargoOfferId: '345678',
+    transporterId: 'trans_004',
+    proposedPrice: 2100,
+    message: 'Refrigerated transport specialist. 24/7 temperature monitoring.',
+    status: 'REJECTED',
+    createdAt: '2024-06-29T16:45:00Z'
+  }
+]
+
+// Helper function to get offers by cargo ID
+export function getOffersByCargoId(cargoId: string): OfferRequest[] {
+  return mockOfferRequests.filter(offer => offer.cargoOfferId === cargoId)
+}
+
+// Helper function to get offer status color
+export function getOfferStatusColor(status: 'PENDING' | 'ACCEPTED' | 'REJECTED'): string {
+  switch (status) {
+    case 'PENDING':
+      return 'text-yellow-400'
+    case 'ACCEPTED':
+      return 'text-green-400'
+    case 'REJECTED':
+      return 'text-red-400'
+    default:
+      return 'text-white'
+  }
+}
+
+// Helper function to get offer status background + text color (PĂSTRÂND CULORILE ORIGINALE)
+export function getOfferStatusBadgeStyles(status: 'PENDING' | 'ACCEPTED' | 'REJECTED'): string {
+  switch (status) {
+    case 'PENDING':
+      return 'bg-yellow-400 text-black font-bold'      // Galben original + text negru
+    case 'ACCEPTED':
+      return 'bg-green-400 text-black font-bold'       // Verde original + text negru
+    case 'REJECTED':
+      return 'bg-red-400 text-white font-bold'         // Roșu original + text alb
+    default:
+      return 'bg-[#363636] text-white'
   }
 }

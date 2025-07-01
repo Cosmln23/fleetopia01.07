@@ -87,4 +87,44 @@ export interface User {
   role: 'CARGO_OWNER' | 'TRANSPORTER'
   rating?: number
   verified: boolean
+  avatar?: string
+  lastSeen?: string
+  isOnline?: boolean
+}
+
+// User-to-User Chat System (different from ChatMessage for AI)
+export interface UserChatMessage {
+  id: string
+  content: string
+  createdAt: string
+  read: boolean
+  sender: User
+  receiver: User
+  cargoOffer?: CargoOffer
+  attachments?: string[]
+}
+
+// System Notifications & Alerts
+export interface SystemAlert {
+  id: string
+  message: string
+  type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR'
+  read: boolean
+  createdAt: string
+  relatedId?: string // Can be cargoId, offerId, etc.
+  details?: string
+  action?: {
+    label: string
+    url: string
+  }
+}
+
+// Chat Conversation for grouping messages
+export interface ChatConversation {
+  id: string
+  participants: User[]
+  cargoOffer?: CargoOffer
+  lastMessage?: UserChatMessage
+  unreadCount: number
+  updatedAt: string
 }

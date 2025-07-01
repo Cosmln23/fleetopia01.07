@@ -1,15 +1,24 @@
 'use client'
 
-import { mockCargoOffers, getStatusColor, getUrgencyColor } from '@/lib/mock-data'
+import { mockCargoOffers, getStatusColor, getUrgencyColor, getStatusBadgeStyles, getUrgencyBadgeStyles } from '@/lib/mock-data'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import AddCargoModal from '@/components/AddCargoModal'
-import { CargoOffer } from '@/lib/types'
+import { CargoOffer, CargoType, UrgencyLevel } from '@/lib/types'
 import { useStickyNavigation } from '@/contexts/StickyNavigationContext'
 
 export default function MarketplacePage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [cargoOffers, setCargoOffers] = useState(mockCargoOffers)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filters, setFilters] = useState({
+    country: '',
+    sortBy: 'newest',
+    cargoType: '',
+    urgency: '',
+    minPrice: '',
+    maxPrice: ''
+  })
   const { setModalOpen } = useStickyNavigation()
 
   const handleAddCargo = (cargoData: Omit<CargoOffer, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -20,6 +29,87 @@ export default function MarketplacePage() {
       updatedAt: new Date().toISOString()
     }
     setCargoOffers(prev => [newCargo, ...prev])
+  }
+
+  // Filter and search logic
+  const filteredOffers = useMemo(() => {
+    let filtered = cargoOffers
+
+    // Search filter
+    if (searchQuery) {
+      filtered = filtered.filter(offer => 
+        offer.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        offer.fromAddress.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        offer.toAddress.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        offer.provider.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
+
+    // Country filter
+    if (filters.country) {
+      filtered = filtered.filter(offer => 
+        offer.fromCountry.toLowerCase().includes(filters.country.toLowerCase()) ||
+        offer.toCountry.toLowerCase().includes(filters.country.toLowerCase())
+      )
+    }
+
+    // Cargo type filter
+    if (filters.cargoType) {
+      filtered = filtered.filter(offer => offer.cargoType === filters.cargoType)
+    }
+
+    // Urgency filter
+    if (filters.urgency) {
+      filtered = filtered.filter(offer => offer.urgency === filters.urgency)
+    }
+
+    // Price filters
+    if (filters.minPrice) {
+      filtered = filtered.filter(offer => offer.price >= parseFloat(filters.minPrice))
+    }
+    if (filters.maxPrice) {
+      filtered = filtered.filter(offer => offer.price <= parseFloat(filters.maxPrice))
+    }
+
+    // Sort
+    switch (filters.sortBy) {
+      case 'price-low':
+        filtered.sort((a, b) => a.price - b.price)
+        break
+      case 'price-high':
+        filtered.sort((a, b) => b.price - a.price)
+        break
+      case 'weight':
+        filtered.sort((a, b) => b.weight - a.weight)
+        break
+      case 'urgency':
+        const urgencyOrder = { 'Urgent': 4, 'High': 3, 'Medium': 2, 'Low': 1 }
+        filtered.sort((a, b) => (urgencyOrder[b.urgency as keyof typeof urgencyOrder] || 0) - (urgencyOrder[a.urgency as keyof typeof urgencyOrder] || 0))
+        break
+      case 'oldest':
+        filtered.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+        break
+      default: // newest
+        filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    }
+
+    return filtered
+  }, [cargoOffers, searchQuery, filters])
+
+  const handleFilterChange = (filterType: string, value: string) => {
+    setFilters(prev => ({ ...prev, [filterType]: value }))
+  }
+
+  const handleClearFilters = () => {
+    setSearchQuery('')
+    setFilters({
+      country: '',
+      sortBy: 'newest',
+      cargoType: '',
+      urgency: '',
+      minPrice: '',
+      maxPrice: ''
+    })
   }
   return (
     <>
@@ -70,72 +160,100 @@ export default function MarketplacePage() {
             </div>
             <input
               placeholder="Search for offers"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-white focus:outline-0 focus:ring-0 border-none bg-[#363636] focus:border-none h-full placeholder:text-[#adadad] px-4 rounded-l-none border-l-0 pl-2 text-base font-normal leading-normal"
-              defaultValue=""
             />
           </div>
         </label>
       </div>
       <div className="flex gap-3 p-3 flex-wrap pr-4">
-        <button className="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#363636] pl-4 pr-2">
-          <p className="text-white text-sm font-medium leading-normal">Country</p>
-          <div className="text-white" data-icon="CaretDown" data-size="20px" data-weight="regular">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" fill="currentColor" viewBox="0 0 256 256">
-              <path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"></path>
-            </svg>
-          </div>
-        </button>
-        <button className="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#363636] pl-4 pr-2">
-          <p className="text-white text-sm font-medium leading-normal">Sort by</p>
-          <div className="text-white" data-icon="CaretDown" data-size="20px" data-weight="regular">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" fill="currentColor" viewBox="0 0 256 256">
-              <path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"></path>
-            </svg>
-          </div>
-        </button>
-        <button className="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#363636] pl-4 pr-2">
-          <p className="text-white text-sm font-medium leading-normal">Cargo Type</p>
-          <div className="text-white" data-icon="CaretDown" data-size="20px" data-weight="regular">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" fill="currentColor" viewBox="0 0 256 256">
-              <path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"></path>
-            </svg>
-          </div>
-        </button>
-        <button className="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#363636] pl-4 pr-2">
-          <p className="text-white text-sm font-medium leading-normal">Urgency</p>
-          <div className="text-white" data-icon="CaretDown" data-size="20px" data-weight="regular">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" fill="currentColor" viewBox="0 0 256 256">
-              <path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"></path>
-            </svg>
-          </div>
-        </button>
-        <button className="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#363636] pl-4 pr-2">
-          <p className="text-white text-sm font-medium leading-normal">Min Price</p>
-          <div className="text-white" data-icon="CaretDown" data-size="20px" data-weight="regular">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" fill="currentColor" viewBox="0 0 256 256">
-              <path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"></path>
-            </svg>
-          </div>
-        </button>
-        <button className="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#363636] pl-4 pr-2">
-          <p className="text-white text-sm font-medium leading-normal">Max Price</p>
-          <div className="text-white" data-icon="CaretDown" data-size="20px" data-weight="regular">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" fill="currentColor" viewBox="0 0 256 256">
-              <path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"></path>
-            </svg>
-          </div>
-        </button>
+        <select 
+          value={filters.country}
+          onChange={(e) => handleFilterChange('country', e.target.value)}
+          className="h-8 bg-[#363636] text-white text-sm rounded-full px-3 focus:outline-none border-none"
+        >
+          <option value="">All Countries</option>
+          <option value="netherlands">Netherlands</option>
+          <option value="germany">Germany</option>
+          <option value="romania">Romania</option>
+          <option value="italy">Italy</option>
+          <option value="poland">Poland</option>
+          <option value="austria">Austria</option>
+          <option value="switzerland">Switzerland</option>
+        </select>
+        
+        <select 
+          value={filters.sortBy}
+          onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+          className="h-8 bg-[#363636] text-white text-sm rounded-full px-3 focus:outline-none border-none"
+        >
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="price-low">Price: Low to High</option>
+          <option value="price-high">Price: High to Low</option>
+          <option value="weight">Weight: Heavy First</option>
+          <option value="urgency">Urgency: High First</option>
+        </select>
+
+        <select 
+          value={filters.cargoType}
+          onChange={(e) => handleFilterChange('cargoType', e.target.value)}
+          className="h-8 bg-[#363636] text-white text-sm rounded-full px-3 focus:outline-none border-none"
+        >
+          <option value="">All Types</option>
+          <option value={CargoType.GENERAL}>General</option>
+          <option value={CargoType.REFRIGERATED}>Refrigerated</option>
+          <option value={CargoType.FRAGILE}>Fragile</option>
+          <option value={CargoType.DANGEROUS}>Dangerous</option>
+          <option value={CargoType.OVERSIZED}>Oversized</option>
+        </select>
+
+        <select 
+          value={filters.urgency}
+          onChange={(e) => handleFilterChange('urgency', e.target.value)}
+          className="h-8 bg-[#363636] text-white text-sm rounded-full px-3 focus:outline-none border-none"
+        >
+          <option value="">All Urgency</option>
+          <option value={UrgencyLevel.LOW}>Low</option>
+          <option value={UrgencyLevel.MEDIUM}>Medium</option>
+          <option value={UrgencyLevel.HIGH}>High</option>
+          <option value={UrgencyLevel.URGENT}>Urgent</option>
+        </select>
+
+        <input
+          type="number"
+          placeholder="Min €"
+          value={filters.minPrice}
+          onChange={(e) => handleFilterChange('minPrice', e.target.value)}
+          className="h-8 w-20 bg-[#363636] text-white text-sm rounded-full px-3 focus:outline-none border-none placeholder:text-[#adadad]"
+        />
+
+        <input
+          type="number"
+          placeholder="Max €"
+          value={filters.maxPrice}
+          onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
+          className="h-8 w-20 bg-[#363636] text-white text-sm rounded-full px-3 focus:outline-none border-none placeholder:text-[#adadad]"
+        />
       </div>
       <div className="flex px-4 py-3 justify-end">
         <button
-          className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#363636] text-white text-sm font-bold leading-normal tracking-[0.015em]"
+          onClick={handleClearFilters}
+          className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#363636] hover:bg-[#4d4d4d] text-white text-sm font-bold leading-normal tracking-[0.015em] transition-colors"
         >
           <span className="truncate">Clear</span>
         </button>
       </div>
-      <p className="text-[#adadad] text-sm font-normal leading-normal pb-3 pt-1 px-4">Showing 1-{cargoOffers.length} of {cargoOffers.length} results</p>
+      <p className="text-[#adadad] text-sm font-normal leading-normal pb-3 pt-1 px-4">
+        Showing 1-{filteredOffers.length} of {cargoOffers.length} results
+        {searchQuery && ` for "${searchQuery}"`}
+        {(filters.country || filters.cargoType || filters.urgency || filters.minPrice || filters.maxPrice) && (
+          <span className="text-yellow-400"> (filtered)</span>
+        )}
+      </p>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3 p-4">
-        {cargoOffers.map((offer) => (
+        {filteredOffers.map((offer) => (
           <Link key={offer.id} href={`/marketplace/${offer.id}`} className="flex flex-col gap-3 pb-3 bg-[#2d2d2d] rounded-xl p-4 cursor-pointer hover:bg-[#333333] transition-colors">
             <div className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl bg-[#363636] flex items-center justify-center">
               <div className="text-[#adadad] text-4xl">📦</div>
@@ -143,7 +261,7 @@ export default function MarketplacePage() {
             <div className="space-y-2">
               <div className="flex justify-between items-start">
                 <p className="text-white text-base font-medium leading-normal">{offer.title}</p>
-                <span className={`text-xs px-2 py-1 rounded-full bg-opacity-20 ${getStatusColor(offer.status)} bg-current`}>
+                <span className={`text-xs px-2 py-1 rounded-full ${getStatusBadgeStyles(offer.status)}`}>
                   {offer.status}
                 </span>
               </div>
@@ -170,10 +288,10 @@ export default function MarketplacePage() {
                   <p className="text-[#adadad] text-xs">€{offer.pricePerKg}/kg</p>
                 </div>
                 <div className="text-right">
-                  <p className={`text-xs font-medium ${getUrgencyColor(offer.urgency)}`}>
-                    {offer.urgency} Priority
-                  </p>
-                  <p className="text-[#adadad] text-xs">{offer.provider}</p>
+                  <span className={`text-xs px-2 py-1 rounded-full ${getUrgencyBadgeStyles(offer.urgency)}`}>
+                    {offer.urgency}
+                  </span>
+                  <p className="text-[#adadad] text-xs mt-1">{offer.provider}</p>
                 </div>
               </div>
             </div>

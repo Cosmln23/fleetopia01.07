@@ -1,5 +1,11 @@
-import { mockCargoOffers, getStatusColor, getUrgencyColor } from '@/lib/mock-data'
+'use client'
+
+import { useState } from 'react'
+import { mockCargoOffers, getStatusColor, getUrgencyColor, getStatusBadgeStyles, getUrgencyBadgeStyles, getOffersByCargoId, getOfferStatusColor, getOfferStatusBadgeStyles } from '@/lib/mock-data'
+import { OfferRequest } from '@/lib/types'
 import { notFound } from 'next/navigation'
+import OfferRequestModal from '@/components/OfferRequestModal'
+import { useStickyNavigation } from '@/contexts/StickyNavigationContext'
 
 interface CargoDetailsPageProps {
   params: {
@@ -9,9 +15,22 @@ interface CargoDetailsPageProps {
 
 export default function CargoDetailsPage({ params }: CargoDetailsPageProps) {
   const cargo = mockCargoOffers.find(offer => offer.id === params.id)
+  const [isOfferModalOpen, setIsOfferModalOpen] = useState(false)
+  const [offerRequests, setOfferRequests] = useState(getOffersByCargoId(params.id))
+  const { setModalOpen } = useStickyNavigation()
   
   if (!cargo) {
     notFound()
+  }
+
+  const handleSubmitOffer = (offerData: Omit<OfferRequest, 'id' | 'createdAt' | 'status'>) => {
+    const newOffer: OfferRequest = {
+      ...offerData,
+      id: Math.random().toString(36).substr(2, 9),
+      status: 'PENDING',
+      createdAt: new Date().toISOString()
+    }
+    setOfferRequests(prev => [newOffer, ...prev])
   }
 
   return (
@@ -33,7 +52,7 @@ export default function CargoDetailsPage({ params }: CargoDetailsPageProps) {
         <div className="bg-[#2d2d2d] rounded-xl p-4 mb-4">
           <div className="flex justify-between items-start mb-3">
             <h2 className="text-white text-lg font-bold">{cargo.title}</h2>
-            <span className={`text-xs px-3 py-1 rounded-full bg-opacity-20 ${getStatusColor(cargo.status)} bg-current`}>
+            <span className={`text-xs px-3 py-1 rounded-full ${getStatusBadgeStyles(cargo.status)}`}>
               {cargo.status}
             </span>
           </div>
@@ -89,7 +108,9 @@ export default function CargoDetailsPage({ params }: CargoDetailsPageProps) {
           )}
           <div className="bg-[#2d2d2d] rounded-xl p-4">
             <p className="text-[#adadad] text-xs uppercase tracking-wide mb-1">Urgency</p>
-            <p className={`text-lg font-bold ${getUrgencyColor(cargo.urgency)}`}>{cargo.urgency}</p>
+            <span className={`inline-block text-sm px-3 py-1 rounded-full ${getUrgencyBadgeStyles(cargo.urgency)}`}>
+              {cargo.urgency}
+            </span>
           </div>
         </div>
 
@@ -122,15 +143,69 @@ export default function CargoDetailsPage({ params }: CargoDetailsPageProps) {
           </div>
         </div>
 
+        {/* Offers Section */}
+        {offerRequests.length > 0 && (
+          <div className="bg-[#2d2d2d] rounded-xl p-4 mb-4">
+            <h3 className="text-white text-md font-bold mb-3">Current Offers ({offerRequests.length})</h3>
+            <div className="space-y-3">
+              {offerRequests.map((offer) => (
+                <div key={offer.id} className="bg-[#363636] rounded-lg p-3">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="text-white text-lg font-bold">€{offer.proposedPrice.toLocaleString()}</p>
+                      <p className="text-[#adadad] text-xs">
+                        {offer.proposedPrice < cargo.price ? 
+                          `€${(cargo.price - offer.proposedPrice).toLocaleString()} less than original` :
+                          offer.proposedPrice > cargo.price ?
+                          `€${(offer.proposedPrice - cargo.price).toLocaleString()} more than original` :
+                          'Same as original price'
+                        }
+                      </p>
+                    </div>
+                    <span className={`text-xs px-2 py-1 rounded-full ${getOfferStatusBadgeStyles(offer.status)}`}>
+                      {offer.status}
+                    </span>
+                  </div>
+                  {offer.message && (
+                    <p className="text-[#adadad] text-sm">{offer.message}</p>
+                  )}
+                  <p className="text-[#adadad] text-xs mt-2">
+                    {new Date(offer.createdAt).toLocaleDateString()} at {new Date(offer.createdAt).toLocaleTimeString()}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="flex gap-3 mt-6">
           <button className="flex-1 bg-[#363636] hover:bg-[#4d4d4d] text-white py-3 px-4 rounded-xl font-medium transition-colors">
             Contact Provider
           </button>
-          <button className="flex-1 bg-white hover:bg-gray-100 text-black py-3 px-4 rounded-xl font-medium transition-colors">
+          <button 
+            onClick={() => {
+              setIsOfferModalOpen(true)
+              setModalOpen(true)
+            }}
+            className="flex-1 bg-white hover:bg-gray-100 text-black py-3 px-4 rounded-xl font-medium transition-colors"
+          >
             Send Offer
           </button>
         </div>
+
+        {/* Offer Request Modal */}
+        <OfferRequestModal
+          isOpen={isOfferModalOpen}
+          onClose={() => {
+            setIsOfferModalOpen(false)
+            setModalOpen(false)
+          }}
+          cargoId={cargo.id}
+          cargoTitle={cargo.title}
+          originalPrice={cargo.price}
+          onSubmit={handleSubmitOffer}
+        />
       </div>
     </>
   )
