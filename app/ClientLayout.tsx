@@ -3,11 +3,12 @@
 import { useState } from 'react'
 import { useStickyNavigation } from '@/contexts/StickyNavigationContext'
 import QueryProvider from '@/contexts/QueryProvider'
-import RoleAwareNavBar from '@/components/RoleAwareNavBar'
+import FullNavigationBar from '@/components/FullNavigationBar'
 import ChatWidget from '@/components/ChatWidget'
 import UserChatDropdown from '@/components/UserChatDropdown'
 import NotificationsDropdown from '@/components/NotificationsDropdown'
 import { getUnreadMessagesCount, getUnreadNotificationsCount } from '@/lib/communication-data'
+import { UserButton } from '@clerk/nextjs'
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const { isModalOpen } = useStickyNavigation()
@@ -85,6 +86,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                       </div>
                     )}
                   </button>
+
+                  {/* User Button */}
+                  <UserButton 
+                    appearance={{
+                      elements: {
+                        avatarBox: "w-8 h-8",
+                        userButtonPopoverCard: "bg-[#1a1a1a] border border-[#363636]",
+                        userButtonPopoverText: "text-white"
+                      }
+                    }}
+                  />
                 </div>
               </div>
             </header>
@@ -102,7 +114,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             <footer className={`${isModalOpen ? 'hidden' : 'fixed'} bottom-0 left-0 right-0 w-full z-[1000] bg-[#1a1a1a] border-t border-solid border-t-[#363636] flex justify-center`}>
               <div className="flex max-w-[960px] flex-1 flex-col">
                 <div className="pb-3">
-                  <RoleAwareNavBar />
+                  <FullNavigationBar />
                 </div>
               </div>
             </footer>

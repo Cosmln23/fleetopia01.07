@@ -1,35 +1,14 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 
-const isProtectedRoute = createRouteMatcher([
-  '/fleet(.*)',
-  '/marketplace/add(.*)',
-  '/dispatcher(.*)'
-])
-
 export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims } = await auth()
-  const role = (sessionClaims?.publicMetadata as any)?.role as string
+  
+  // Note: All routes are public - no authentication required
+  // Authentication state is handled within components for optional features
 
-  // Protect routes that require authentication
-  if (isProtectedRoute(req)) {
-    if (!userId) {
-      return NextResponse.redirect(new URL('/sign-in', req.url))
-    }
-  }
-
-  // Role-based route protection
-  const pathname = req.nextUrl.pathname
-
-  // Fleet section - only carriers
-  if (pathname.startsWith('/fleet') && role !== 'carrier') {
-    return NextResponse.redirect(new URL('/', req.url))
-  }
-
-  // Add cargo - only providers
-  if (pathname.startsWith('/marketplace/add') && role !== 'provider') {
-    return NextResponse.redirect(new URL('/', req.url))
-  }
+  // Note: Role-based restrictions removed - everyone can access all pages
+  // Role differentiation happens within page functionality, not route access
 
   return NextResponse.next()
 })
