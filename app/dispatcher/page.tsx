@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import CostSettingsModal from '@/components/CostSettingsModal'
+import StatsPanel from '@/components/StatsPanel'
 import { useStickyNavigation } from '@/contexts/StickyNavigationContext'
 // Mock API import commented out for production build
 // import { agentMockApi, type DispatcherSuggestion } from '@/lib/__mocks__/agent-mock-data'
@@ -45,6 +46,7 @@ interface LevelSettings {
 export default function DispatcherPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isAgentActive, setIsAgentActive] = useState(false)
+  const [autoAssignVehicle, setAutoAssignVehicle] = useState(false)
   const [suggestions, setSuggestions] = useState<DispatcherSuggestion[]>([])
   const [agentStats, setAgentStats] = useState<any>(null)
   const { setModalOpen } = useStickyNavigation()
@@ -63,32 +65,45 @@ export default function DispatcherPage() {
     L4: false
   })
 
-  // Load settings from localStorage on component mount
+  // Load settings from localStorage and server on component mount
   useEffect(() => {
-    const savedSettings = localStorage.getItem('costSettings')
-    if (savedSettings) {
-      setCostSettings(JSON.parse(savedSettings))
-    }
-    
-    const savedAgent = localStorage.getItem('agentActive')
-    if (savedAgent) {
-      setIsAgentActive(JSON.parse(savedAgent))
-    }
-    
-    const savedLevels = localStorage.getItem('levelSettings')
-    if (savedLevels) {
-      setLevelSettings(JSON.parse(savedLevels))
+    const initializeSettings = async () => {
+      // Load cost settings from localStorage (keep local)
+      const savedSettings = localStorage.getItem('costSettings')
+      if (savedSettings) {
+        setCostSettings(JSON.parse(savedSettings))
+      }
+      
+      // Load level settings from localStorage (keep local)
+      const savedLevels = localStorage.getItem('levelSettings')
+      if (savedLevels) {
+        setLevelSettings(JSON.parse(savedLevels))
+      }
+
+      // Load agent and auto-assign settings from server
+      try {
+        const response = await fetch('/api/settings')
+        const serverSettings = await response.json()
+        setIsAgentActive(serverSettings.agentOn)
+        setAutoAssignVehicle(serverSettings.autoAssign)
+      } catch (error) {
+        console.error('Failed to load server settings:', error)
+        // Fallback to localStorage if server fails
+        const savedAgent = localStorage.getItem('agentActive')
+        if (savedAgent) {
+          setIsAgentActive(JSON.parse(savedAgent))
+        }
+        const savedAutoAssign = localStorage.getItem('autoAssignVehicle')
+        if (savedAutoAssign) {
+          setAutoAssignVehicle(JSON.parse(savedAutoAssign))
+        }
+      }
+
+      // Load initial agent data
+      updateAgentStats()
     }
 
-    // Load initial agent data
-    updateAgentStats()
-    
-    // Mock API disabled for production - suggestions will be empty
-    // const levels = savedLevels ? JSON.parse(savedLevels) : levelSettings
-    // if (levels.L0 && levels.L1) {
-    //   const initialSuggestions = agentMockApi.getSuggestions()
-    //   setSuggestions(initialSuggestions)
-    // }
+    initializeSettings()
   }, [])
 
   const handleSaveSettings = (newSettings: CostSettings) => {
@@ -96,16 +111,58 @@ export default function DispatcherPage() {
     localStorage.setItem('costSettings', JSON.stringify(newSettings))
   }
 
-  const handleAgentToggle = () => {
+  const handleAgentToggle = async () => {
     const newState = !isAgentActive
     setIsAgentActive(newState)
-    localStorage.setItem('agentActive', JSON.stringify(newState))
+    
+    // Sync with server
+    try {
+      await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentOn: newState })
+      })
+    } catch (error) {
+      console.error('Failed to sync agent setting with server:', error)
+      // Fallback to localStorage
+      localStorage.setItem('agentActive', JSON.stringify(newState))
+    }
     
     // Când agent se dezactivează, toate nivelurile se dezactivează
     if (!newState) {
       const resetLevels = { L0: false, L1: false, L2: false, L3: false, L4: false }
       setLevelSettings(resetLevels)
       localStorage.setItem('levelSettings', JSON.stringify(resetLevels))
+      // Auto-assign se dezactivează și el când agentul se oprește
+      setAutoAssignVehicle(false)
+      try {
+        await fetch('/api/settings', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ autoAssign: false })
+        })
+      } catch (error) {
+        console.error('Failed to sync auto-assign setting with server:', error)
+        localStorage.setItem('autoAssignVehicle', JSON.stringify(false))
+      }
+    }
+  }
+
+  const handleAutoAssignToggle = async () => {
+    const newState = !autoAssignVehicle
+    setAutoAssignVehicle(newState)
+    
+    // Sync with server
+    try {
+      await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ autoAssign: newState })
+      })
+    } catch (error) {
+      console.error('Failed to sync auto-assign setting with server:', error)
+      // Fallback to localStorage
+      localStorage.setItem('autoAssignVehicle', JSON.stringify(newState))
     }
   }
 
@@ -203,8 +260,27 @@ export default function DispatcherPage() {
             </div>
           </div>
 
+          {/* Auto-Assign Vehicle Toggle - nur sichtbar wenn Agent ON */}
+          {isAgentActive && (
+            <div className="flex items-center gap-4 bg-[#1a1a1a] px-4 min-h-12 justify-between">
+              <p className="text-white text-xs font-normal leading-normal flex-1 truncate">Auto-Assign Vehicle</p>
+              <div className="shrink-0">
+                <button
+                  onClick={handleAutoAssignToggle}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
+                    autoAssignVehicle
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-[#363636] text-[#adadad] hover:bg-[#4d4d4d]'
+                  }`}
+                >
+                  {autoAssignVehicle ? 'ON' : 'OFF'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Cost Settings Button */}
-          <div className="px-4 py-2">
+          <div className="px-4 py-2" style={{marginTop: '8px'}}>
             <button
               onClick={() => {
                 setIsModalOpen(true)
@@ -252,28 +328,13 @@ export default function DispatcherPage() {
 
         {/* Main Content Area */}
         <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
-          {/* Agent Stats Section */}
-          {agentStats && (
-            <div className="px-4 py-2">
-              <div className="bg-[#2d2d2d] rounded-xl p-4">
-                <h4 className="text-white text-md font-bold mb-3">Agent Performance</h4>
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <div className="text-2xl font-bold text-blue-400">{agentStats.totalSuggestions}</div>
-                    <div className="text-xs text-[#adadad]">Suggestions</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-green-400">{agentStats.averageProfitPct}%</div>
-                    <div className="text-xs text-[#adadad]">Avg Profit</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-yellow-400">{agentStats.activeVehicles}</div>
-                    <div className="text-xs text-[#adadad]">Active Vehicles</div>
-                  </div>
-                </div>
-              </div>
+          {/* Agent Performance Section - Dynamic Stats */}
+          <div className="px-4 py-2">
+            <div className="bg-[#2d2d2d] rounded-xl p-4">
+              <h4 className="text-white text-md font-bold mb-3">Agent Performance</h4>
+              <StatsPanel />
             </div>
-          )}
+          </div>
 
           {/* Recommended Loads Section */}
           <h3 className="text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">AI Suggestions</h3>

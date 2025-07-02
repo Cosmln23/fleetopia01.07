@@ -1,5 +1,6 @@
 import './globals.css'
 import type { Metadata } from 'next'
+import { ClerkProvider } from '@clerk/nextjs'
 import { StickyNavigationProvider } from '@/contexts/StickyNavigationContext'
 import ClientLayout from './ClientLayout'
 
@@ -14,8 +15,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <StickyNavigationProvider>
-      <ClientLayout>{children}</ClientLayout>
-    </StickyNavigationProvider>
+    <ClerkProvider>
+      <StickyNavigationProvider>
+        <ClientLayout>{children}</ClientLayout>
+      </StickyNavigationProvider>
+    </ClerkProvider>
   )
 }
