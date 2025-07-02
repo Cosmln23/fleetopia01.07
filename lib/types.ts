@@ -37,6 +37,10 @@ export interface CargoOffer {
   toAddress: string
   fromCountry: string
   toCountry: string
+  fromPostal?: string
+  fromCity?: string
+  toPostal?: string
+  toCity?: string
   pickupLat?: number
   pickupLng?: number
   deliveryLat?: number

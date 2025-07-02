@@ -1,0 +1,71 @@
+-- FLEETOPIA MARKETPLACE DATABASE SCHEMA
+-- PostgreSQL Schema for Cargo Management System
+-- Created: 02.07.2025
+
+-- Cargo table for marketplace listings
+CREATE TABLE IF NOT EXISTS cargo (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  type TEXT NOT NULL,
+  urgency TEXT NOT NULL,
+  weight REAL NOT NULL,
+  volume REAL,
+  from_addr TEXT NOT NULL,
+  from_country TEXT NOT NULL,
+  from_postal TEXT,
+  from_city TEXT,
+  to_addr TEXT NOT NULL,
+  to_country TEXT NOT NULL,
+  to_postal TEXT,
+  to_city TEXT,
+  from_lat REAL,
+  from_lng REAL,
+  to_lat REAL,
+  to_lng REAL,
+  load_date TEXT NOT NULL,
+  delivery_date TEXT NOT NULL,
+  price REAL,                   -- NULL = negotiable
+  price_per_kg REAL,
+  provider_name TEXT NOT NULL,
+  provider_status TEXT NOT NULL,
+  status TEXT DEFAULT 'NEW',    -- NEW | OPEN | TAKEN | IN_PROGRESS | COMPLETED
+  created_ts BIGINT NOT NULL,
+  updated_ts BIGINT NOT NULL,
+  posting_date TEXT NOT NULL
+);
+
+-- Offer requests table for bidding system
+CREATE TABLE IF NOT EXISTS offer_requests (
+  id TEXT PRIMARY KEY,
+  cargo_id TEXT NOT NULL,
+  transporter_id TEXT NOT NULL,
+  proposed_price REAL NOT NULL,
+  message TEXT,
+  status TEXT DEFAULT 'PENDING', -- PENDING | ACCEPTED | REJECTED
+  created_ts BIGINT NOT NULL,
+  FOREIGN KEY (cargo_id) REFERENCES cargo(id) ON DELETE CASCADE
+);
+
+-- Users table for basic user management
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  role TEXT NOT NULL, -- CARGO_OWNER | TRANSPORTER
+  rating REAL DEFAULT 0,
+  verified BOOLEAN DEFAULT FALSE,
+  avatar TEXT,
+  last_seen BIGINT,
+  is_online BOOLEAN DEFAULT FALSE,
+  created_ts BIGINT NOT NULL
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_cargo_status ON cargo(status);
+CREATE INDEX IF NOT EXISTS idx_cargo_created ON cargo(created_ts);
+CREATE INDEX IF NOT EXISTS idx_cargo_country ON cargo(from_country, to_country);
+CREATE INDEX IF NOT EXISTS idx_cargo_type ON cargo(type);
+CREATE INDEX IF NOT EXISTS idx_cargo_urgency ON cargo(urgency);
+CREATE INDEX IF NOT EXISTS idx_cargo_price ON cargo(price);
+CREATE INDEX IF NOT EXISTS idx_offer_cargo ON offer_requests(cargo_id);
+CREATE INDEX IF NOT EXISTS idx_offer_status ON offer_requests(status);

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { mockCargoOffers, getStatusColor, getUrgencyColor, getStatusBadgeStyles, getUrgencyBadgeStyles, getOffersByCargoId, getOfferStatusColor, getOfferStatusBadgeStyles } from '@/lib/mock-data'
+import { formatPrice } from '@/lib/formatters'
 import { OfferRequest } from '@/lib/types'
 import { notFound } from 'next/navigation'
 import OfferRequestModal from '@/components/OfferRequestModal'
@@ -62,7 +63,22 @@ export default function CargoDetailsPage({ params }: CargoDetailsPageProps) {
 
         {/* Route Information */}
         <div className="bg-[#2d2d2d] rounded-xl p-4 mb-4">
-          <h3 className="text-white text-md font-bold mb-3">Route Information</h3>
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-white text-md font-bold">Route Information</h3>
+            {cargo.pickupLat && cargo.pickupLng && cargo.deliveryLat && cargo.deliveryLng && (
+              <a
+                href={`https://www.google.com/maps/dir/${cargo.pickupLat},${cargo.pickupLng}/${cargo.deliveryLat},${cargo.deliveryLng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-[#363636] hover:bg-[#4d4d4d] text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256">
+                  <path d="M128,64a40,40,0,1,0,40,40A40,40,0,0,0,128,64Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,128Zm0-112a88.1,88.1,0,0,0-88,88c0,31.4,14.51,64.68,42,96.25a254.19,254.19,0,0,0,41.45,38.3,8,8,0,0,0,9.18,0A254.19,254.19,0,0,0,174,200.25c27.45-31.57,42-64.85,42-96.25A88.1,88.1,0,0,0,128,16Zm0,206c-16.53-13-72-60.75-72-118a72,72,0,0,1,144,0C200,161.23,144.53,209,128,222Z"></path>
+                </svg>
+                View on Map
+              </a>
+            )}
+          </div>
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 bg-green-400 rounded-full"></div>
@@ -119,7 +135,7 @@ export default function CargoDetailsPage({ params }: CargoDetailsPageProps) {
           <h3 className="text-white text-md font-bold mb-3">Price Information</h3>
           <div className="flex justify-between items-center">
             <div>
-              <p className="text-white text-2xl font-bold">€{cargo.price.toLocaleString()}</p>
+              <p className="text-white text-2xl font-bold">€{formatPrice(cargo.price)}</p>
               <p className="text-[#adadad] text-sm">Total Price</p>
             </div>
             <div className="text-right">
@@ -152,12 +168,12 @@ export default function CargoDetailsPage({ params }: CargoDetailsPageProps) {
                 <div key={offer.id} className="bg-[#363636] rounded-lg p-3">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <p className="text-white text-lg font-bold">€{offer.proposedPrice.toLocaleString()}</p>
+                      <p className="text-white text-lg font-bold">€{formatPrice(offer.proposedPrice)}</p>
                       <p className="text-[#adadad] text-xs">
                         {offer.proposedPrice < cargo.price ? 
-                          `€${(cargo.price - offer.proposedPrice).toLocaleString()} less than original` :
+                          `€${formatPrice(cargo.price - offer.proposedPrice)} less than original` :
                           offer.proposedPrice > cargo.price ?
-                          `€${(offer.proposedPrice - cargo.price).toLocaleString()} more than original` :
+                          `€${formatPrice(offer.proposedPrice - cargo.price)} more than original` :
                           'Same as original price'
                         }
                       </p>

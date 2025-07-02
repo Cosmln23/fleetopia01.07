@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { OfferRequest } from '@/lib/types'
+import { formatPrice } from '@/lib/formatters'
 
 interface OfferRequestModalProps {
   isOpen: boolean
@@ -70,7 +71,7 @@ export default function OfferRequestModal({
           <div className="bg-[#2d2d2d] rounded-lg p-4">
             <h3 className="text-white text-lg font-bold mb-2">Cargo Details</h3>
             <p className="text-[#adadad] text-sm mb-1">{cargoTitle}</p>
-            <p className="text-white text-lg font-bold">Original Price: €{originalPrice.toLocaleString()}</p>
+            <p className="text-white text-lg font-bold">Original Price: €{formatPrice(originalPrice)}</p>
           </div>
 
           {/* Price Offer */}
@@ -90,11 +91,11 @@ export default function OfferRequestModal({
               <div className="mt-2 text-sm">
                 {savings > 0 ? (
                   <p className="text-green-400">
-                    💰 Client saves €{savings.toLocaleString()} ({savingsPercent}% less)
+                    💰 Client saves €{formatPrice(savings)} ({savingsPercent}% less)
                   </p>
                 ) : savings < 0 ? (
                   <p className="text-red-400">
-                    ⚠️ €{Math.abs(savings).toLocaleString()} more than original price
+                    ⚠️ €{formatPrice(Math.abs(savings))} more than original price
                   </p>
                 ) : (
                   <p className="text-[#adadad]">Same as original price</p>

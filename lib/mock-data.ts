@@ -1,5 +1,7 @@
 import { CargoOffer, CargoStatus, CargoType, UrgencyLevel, OfferRequest } from './types'
 
+export type { CargoOffer }
+
 export const mockCargoOffers: CargoOffer[] = [
   {
     id: '123456',
@@ -15,6 +17,10 @@ export const mockCargoOffers: CargoOffer[] = [
     toAddress: 'Carei, Romania, 445100',
     fromCountry: 'Netherlands',
     toCountry: 'Romania',
+    fromPostal: '2595 AA',
+    fromCity: 'The Hague',
+    toPostal: '445100',
+    toCity: 'Carei',
     pickupLat: 52.0705,
     pickupLng: 4.3007,
     deliveryLat: 47.6912,
@@ -45,6 +51,10 @@ export const mockCargoOffers: CargoOffer[] = [
     toAddress: 'Bucharest, Romania, 010011',
     fromCountry: 'Germany',
     toCountry: 'Romania',
+    fromPostal: '80331',
+    fromCity: 'Munich',
+    toPostal: '010011',
+    toCity: 'Bucharest',
     pickupLat: 48.1351,
     pickupLng: 11.5820,
     deliveryLat: 44.4268,
@@ -75,6 +85,10 @@ export const mockCargoOffers: CargoOffer[] = [
     toAddress: 'Milan, Italy, 20121',
     fromCountry: 'Netherlands',
     toCountry: 'Italy',
+    fromPostal: '3011 AD',
+    fromCity: 'Rotterdam',
+    toPostal: '20121',
+    toCity: 'Milan',
     pickupLat: 51.9244,
     pickupLng: 4.4777,
     deliveryLat: 45.4642,
@@ -105,6 +119,10 @@ export const mockCargoOffers: CargoOffer[] = [
     toAddress: 'Warsaw, Poland, 00-001',
     fromCountry: 'Germany',
     toCountry: 'Poland',
+    fromPostal: '20095',
+    fromCity: 'Hamburg',
+    toPostal: '00-001',
+    toCity: 'Warsaw',
     pickupLat: 53.5511,
     pickupLng: 9.9937,
     deliveryLat: 52.2297,
@@ -135,6 +153,10 @@ export const mockCargoOffers: CargoOffer[] = [
     toAddress: 'Vienna, Austria, 1010',
     fromCountry: 'Switzerland',
     toCountry: 'Austria',
+    fromPostal: '4001',
+    fromCity: 'Basel',
+    toPostal: '1010',
+    toCity: 'Vienna',
     pickupLat: 47.5596,
     pickupLng: 7.5886,
     deliveryLat: 48.2082,

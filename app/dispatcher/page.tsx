@@ -3,6 +3,28 @@
 import { useState, useEffect } from 'react'
 import CostSettingsModal from '@/components/CostSettingsModal'
 import { useStickyNavigation } from '@/contexts/StickyNavigationContext'
+// Mock API import commented out for production build
+// import { agentMockApi, type DispatcherSuggestion } from '@/lib/__mocks__/agent-mock-data'
+import { formatPrice } from '@/lib/formatters'
+
+// Temporary interface for production build (replace with real API later)
+interface DispatcherSuggestion {
+  id: string
+  status: 'pending' | 'quoted' | 'accepted' | 'rejected'
+  offer: {
+    fromAddress: string
+    toAddress: string
+    weight: number
+  }
+  distance: number
+  vehicle: {
+    name: string
+  }
+  cost: number
+  quote: number
+  profitPct: number
+  score: number
+}
 
 interface CostSettings {
   driverPay: number
@@ -23,6 +45,8 @@ interface LevelSettings {
 export default function DispatcherPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isAgentActive, setIsAgentActive] = useState(false)
+  const [suggestions, setSuggestions] = useState<DispatcherSuggestion[]>([])
+  const [agentStats, setAgentStats] = useState<any>(null)
   const { setModalOpen } = useStickyNavigation()
   const [costSettings, setCostSettings] = useState<CostSettings>({
     driverPay: 500,
@@ -55,6 +79,16 @@ export default function DispatcherPage() {
     if (savedLevels) {
       setLevelSettings(JSON.parse(savedLevels))
     }
+
+    // Load initial agent data
+    updateAgentStats()
+    
+    // Mock API disabled for production - suggestions will be empty
+    // const levels = savedLevels ? JSON.parse(savedLevels) : levelSettings
+    // if (levels.L0 && levels.L1) {
+    //   const initialSuggestions = agentMockApi.getSuggestions()
+    //   setSuggestions(initialSuggestions)
+    // }
   }, [])
 
   const handleSaveSettings = (newSettings: CostSettings) => {
@@ -78,9 +112,60 @@ export default function DispatcherPage() {
   const handleLevelToggle = (level: keyof LevelSettings) => {
     if (!isAgentActive) return // Nu permite toggle dacă agentul nu e activ
     
-    const newLevels = { ...levelSettings, [level]: !levelSettings[level] }
+    const newState = !levelSettings[level]
+    const newLevels = { ...levelSettings, [level]: newState }
     setLevelSettings(newLevels)
     localStorage.setItem('levelSettings', JSON.stringify(newLevels))
+    
+    // Execute agent level actions
+    if (newState) {
+      switch(level) {
+        case 'L0':
+          console.log('🔄 Starting L0 RADAR...')
+          break
+        case 'L1':
+          console.log('🧮 Running L1 CALCULATOR...')
+          // Mock API disabled - will show "Coming soon" message
+          // if (newLevels.L0) {
+          //   const newSuggestions = agentMockApi.generateSuggestions()
+          //   setSuggestions(newSuggestions)
+          //   updateAgentStats()
+          // }
+          break
+        case 'L2':
+          console.log('📤 L2 QUOTE BOT activated')
+          break
+        case 'L3':
+          console.log('🎯 Running L3 AUTO-TUNE...')
+          // Mock API disabled
+          // agentMockApi.autoTuneMargins()
+          updateAgentStats()
+          break
+        case 'L4':
+          console.log('🤝 L4 NEGOTIATION ready')
+          break
+      }
+    }
+  }
+
+  const updateAgentStats = () => {
+    // Mock API disabled - using static stats for UI demo
+    const stats = {
+      totalSuggestions: 0,
+      averageProfitPct: 0,
+      activeVehicles: 0
+    }
+    setAgentStats(stats)
+  }
+
+  const handleSendQuote = (suggestionId: string) => {
+    // Mock API disabled - function will do nothing for now
+    console.log('Send quote requested for:', suggestionId)
+    // const result = agentMockApi.sendQuote(suggestionId)
+    // if (result) {
+    //   setSuggestions(prev => prev.map(s => s.id === suggestionId ? result : s))
+    //   updateAgentStats()
+    // }
   }
 
   const totalCost = costSettings.driverPay + costSettings.fuel + costSettings.maintenance + costSettings.tolls + costSettings.insurance
@@ -167,65 +252,99 @@ export default function DispatcherPage() {
 
         {/* Main Content Area */}
         <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
+          {/* Agent Stats Section */}
+          {agentStats && (
+            <div className="px-4 py-2">
+              <div className="bg-[#2d2d2d] rounded-xl p-4">
+                <h4 className="text-white text-md font-bold mb-3">Agent Performance</h4>
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <div className="text-2xl font-bold text-blue-400">{agentStats.totalSuggestions}</div>
+                    <div className="text-xs text-[#adadad]">Suggestions</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-green-400">{agentStats.averageProfitPct}%</div>
+                    <div className="text-xs text-[#adadad]">Avg Profit</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-yellow-400">{agentStats.activeVehicles}</div>
+                    <div className="text-xs text-[#adadad]">Active Vehicles</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Recommended Loads Section */}
-          <h3 className="text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Recommended Loads</h3>
+          <h3 className="text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">AI Suggestions</h3>
           
-          {/* Load 1 */}
-          <div className="p-4">
-            <div className="flex items-stretch justify-between gap-4 rounded-xl">
-              <div className="flex flex-[2_2_0px] flex-col gap-4">
-                <div className="flex flex-col gap-1">
-                  <p className="text-[#adadad] text-sm font-normal leading-normal">Route: New York to Los Angeles</p>
-                  <p className="text-white text-base font-bold leading-tight">Distance: 2,400 miles</p>
-                  <p className="text-[#adadad] text-sm font-normal leading-normal">ETA: 40 hours | Cost: $1,200 | Suggested Price: $2,000</p>
-                </div>
-                <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-8 px-4 flex-row-reverse bg-[#363636] text-white text-sm font-medium leading-normal w-fit">
-                  <span className="truncate">Send Quote</span>
-                </button>
-              </div>
-              <div className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl flex-1 bg-[#363636] flex items-center justify-center">
-                <div className="text-[#adadad] text-2xl">🚛</div>
+          {suggestions.length === 0 ? (
+            <div className="p-4">
+              <div className="bg-[#2d2d2d] rounded-xl p-6 text-center">
+                <div className="text-[#adadad] text-lg mb-2">🤖</div>
+                <p className="text-[#adadad] text-sm">AI Suggestions - Coming Soon</p>
+                <p className="text-[#666] text-xs mt-1">
+                  {!isAgentActive ? 'Turn on Agent to see the interface' : 
+                   'Mock AI system temporarily disabled for production build. Real AI integration coming soon.'}
+                </p>
               </div>
             </div>
-          </div>
-
-          {/* Load 2 */}
-          <div className="p-4">
-            <div className="flex items-stretch justify-between gap-4 rounded-xl">
-              <div className="flex flex-[2_2_0px] flex-col gap-4">
-                <div className="flex flex-col gap-1">
-                  <p className="text-[#adadad] text-sm font-normal leading-normal">Route: Chicago to Miami</p>
-                  <p className="text-white text-base font-bold leading-tight">Distance: 1,300 miles</p>
-                  <p className="text-[#adadad] text-sm font-normal leading-normal">ETA: 22 hours | Cost: $800 | Suggested Price: $1,500</p>
+          ) : (
+            suggestions.slice(0, 5).map((suggestion) => (
+              <div key={suggestion.id} className="p-4">
+                <div className="flex items-stretch justify-between gap-4 rounded-xl">
+                  <div className="flex flex-[2_2_0px] flex-col gap-4">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[#adadad] text-sm font-normal leading-normal">
+                          Route: {suggestion.offer.fromAddress.split(',')[0]} → {suggestion.offer.toAddress.split(',')[0]}
+                        </p>
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                          suggestion.status === 'quoted' ? 'bg-blue-400 text-white' :
+                          suggestion.status === 'accepted' ? 'bg-green-400 text-black' :
+                          suggestion.status === 'rejected' ? 'bg-red-400 text-white' :
+                          'bg-gray-400 text-white'
+                        }`}>
+                          {suggestion.status.toUpperCase()}
+                        </span>
+                      </div>
+                      <p className="text-white text-base font-bold leading-tight">
+                        Distance: {Math.round(suggestion.distance)}km | Weight: {suggestion.offer.weight}kg
+                      </p>
+                      <p className="text-[#adadad] text-sm font-normal leading-normal">
+                        Vehicle: {suggestion.vehicle.name} | Cost: €{formatPrice(suggestion.cost)} | Quote: €{formatPrice(suggestion.quote)}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-medium ${
+                          suggestion.profitPct >= 15 ? 'text-green-400' :
+                          suggestion.profitPct >= 8 ? 'text-yellow-400' :
+                          'text-red-400'
+                        }`}>
+                          Profit: {suggestion.profitPct.toFixed(1)}%
+                        </span>
+                        <span className="text-xs text-[#adadad]">Score: {suggestion.score}</span>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => handleSendQuote(suggestion.id)}
+                      disabled={suggestion.status !== 'pending' || !levelSettings.L2}
+                      className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-8 px-4 flex-row-reverse bg-[#363636] hover:bg-[#4d4d4d] disabled:bg-[#2d2d2d] disabled:cursor-not-allowed text-white text-sm font-medium leading-normal w-fit transition-colors"
+                    >
+                      <span className="truncate">
+                        {suggestion.status === 'pending' ? 'Send Quote' :
+                         suggestion.status === 'quoted' ? 'Quote Sent' :
+                         suggestion.status === 'accepted' ? 'Accepted ✓' :
+                         'Rejected ✗'}
+                      </span>
+                    </button>
+                  </div>
+                  <div className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl flex-1 bg-[#363636] flex items-center justify-center">
+                    <div className="text-[#adadad] text-2xl">📦</div>
+                  </div>
                 </div>
-                <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-8 px-4 flex-row-reverse bg-[#363636] text-white text-sm font-medium leading-normal w-fit">
-                  <span className="truncate">Send Quote</span>
-                </button>
               </div>
-              <div className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl flex-1 bg-[#363636] flex items-center justify-center">
-                <div className="text-[#adadad] text-2xl">🚛</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Load 3 */}
-          <div className="p-4">
-            <div className="flex items-stretch justify-between gap-4 rounded-xl">
-              <div className="flex flex-[2_2_0px] flex-col gap-4">
-                <div className="flex flex-col gap-1">
-                  <p className="text-[#adadad] text-sm font-normal leading-normal">Route: Seattle to Denver</p>
-                  <p className="text-white text-base font-bold leading-tight">Distance: 1,100 miles</p>
-                  <p className="text-[#adadad] text-sm font-normal leading-normal">ETA: 18 hours | Cost: $600 | Suggested Price: $1,200</p>
-                </div>
-                <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-8 px-4 flex-row-reverse bg-[#363636] text-white text-sm font-medium leading-normal w-fit">
-                  <span className="truncate">Send Quote</span>
-                </button>
-              </div>
-              <div className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl flex-1 bg-[#363636] flex items-center justify-center">
-                <div className="text-[#adadad] text-2xl">🚛</div>
-              </div>
-            </div>
-          </div>
+            ))
+          )}
 
         </div>
       </div>

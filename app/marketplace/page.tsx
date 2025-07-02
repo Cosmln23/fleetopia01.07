@@ -1,6 +1,7 @@
 'use client'
 
 import { mockCargoOffers, getStatusColor, getUrgencyColor, getStatusBadgeStyles, getUrgencyBadgeStyles } from '@/lib/mock-data'
+import { formatPrice } from '@/lib/formatters'
 import Link from 'next/link'
 import { useState, useMemo } from 'react'
 import AddCargoModal from '@/components/AddCargoModal'
@@ -284,7 +285,7 @@ export default function MarketplacePage() {
               </div>
               <div className="flex justify-between items-center pt-2">
                 <div>
-                  <p className="text-white text-lg font-bold">€{offer.price.toLocaleString()}</p>
+                  <p className="text-white text-lg font-bold">€{formatPrice(offer.price)}</p>
                   <p className="text-[#adadad] text-xs">€{offer.pricePerKg}/kg</p>
                 </div>
                 <div className="text-right">

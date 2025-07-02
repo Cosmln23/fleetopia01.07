@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import AddFleetModal from '@/components/AddFleetModal'
 import { useStickyNavigation } from '@/contexts/StickyNavigationContext'
 
@@ -22,6 +22,7 @@ interface VehicleData {
 export default function FleetPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const { setModalOpen } = useStickyNavigation()
+  const [showTraffic, setShowTraffic] = useState(false)
   const [vehicles, setVehicles] = useState<VehicleData[]>([
     {
       name: "Fleet Alpha",
@@ -35,7 +36,7 @@ export default function FleetPage() {
     },
     {
       name: "Fleet Beta",
-      licensePlate: "DEF456", 
+      licensePlate: "DEF456",
       vehicleType: "Van",
       capacity: 3.5,
       consumption: 12.0,
@@ -46,7 +47,7 @@ export default function FleetPage() {
     {
       name: "Fleet Gamma",
       licensePlate: "GHI789",
-      vehicleType: "Semi-Truck", 
+      vehicleType: "Semi-Truck",
       capacity: 40,
       consumption: 38.2,
       location: "Timisoara, Romania",
@@ -59,7 +60,7 @@ export default function FleetPage() {
       vehicleType: "Refrigerated Truck",
       capacity: 20,
       consumption: 42.0,
-      location: "Constanta, Romania", 
+      location: "Constanta, Romania",
       driver: "Ava Martinez",
       status: "Inactive"
     },
@@ -70,7 +71,7 @@ export default function FleetPage() {
       capacity: 45,
       consumption: 40.5,
       location: "Iasi, Romania",
-      driver: "Liam Harris", 
+      driver: "Liam Harris",
       status: "Active"
     }
   ])
@@ -79,15 +80,97 @@ export default function FleetPage() {
     setVehicles(prev => [...prev, vehicleData])
   }
 
+  useEffect(() => {
+    const loadGoogleMaps = () => {
+      if (typeof window !== 'undefined' && (window as any).google) {
+        initializeMap()
+        return
+      }
+
+      const script = document.createElement('script')
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&callback=initMap`
+      script.async = true
+      script.defer = true
+      
+      ;(window as any).initMap = initializeMap
+      document.head.appendChild(script)
+    }
+
+    const initializeMap = () => {
+      const mapElement = document.getElementById('fleet-map')
+      if (!mapElement) return
+
+      const map = new (window as any).google.maps.Map(mapElement, {
+        center: { lat: 45.9432, lng: 24.9668 }, // Romania center
+        zoom: 7,
+        styles: []
+      })
+
+      // Initialize traffic layer
+      const trafficLayer = new (window as any).google.maps.TrafficLayer()
+      if (showTraffic) {
+        trafficLayer.setMap(map)
+      }
+
+      // Add markers for each vehicle
+      vehicles.forEach((vehicle) => {
+        const defaultCoordinates = getDefaultCoordinates(vehicle.location)
+        
+        new (window as any).google.maps.Marker({
+          position: vehicle.coordinates || defaultCoordinates,
+          map: map,
+          title: `${vehicle.name} - ${vehicle.licensePlate}`,
+          icon: {
+            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="${vehicle.status === 'Active' ? '#0bda0b' : '#adadad'}" viewBox="0 0 256 256">
+                <path d="M247.42,117l-14-35A15.93,15.93,0,0,0,218.58,72H184V64a8,8,0,0,0-8-8H24A16,16,0,0,0,8,72V184a16,16,0,0,0,16,16H41a32,32,0,0,0,62,0h50a32,32,0,0,0,62,0h17a16,16,0,0,0,16-16V120A7.94,7.94,0,0,0,247.42,117ZM184,88h34.58l9.6,24H184ZM24,72H168v64H24ZM72,208a16,16,0,1,1,16-16A16,16,0,0,1,72,208Zm81-24H103a32,32,0,0,0-62,0H24V152H168v12.31A32.11,32.11,0,0,0,153,184Zm31,24a16,16,0,1,1,16-16A16,16,0,0,1,184,208Zm48-24H215a32.06,32.06,0,0,0-31-24V128h48Z"/>
+              </svg>
+            `),
+            scaledSize: new (window as any).google.maps.Size(24, 24)
+          }
+        })
+      })
+    }
+
+    const getDefaultCoordinates = (location: string) => {
+      const coordinates: { [key: string]: { lat: number; lng: number } } = {
+        'Bucharest, Romania': { lat: 44.4268, lng: 26.1025 },
+        'Cluj, Romania': { lat: 46.7712, lng: 23.6236 },
+        'Timisoara, Romania': { lat: 45.7489, lng: 21.2087 },
+        'Constanta, Romania': { lat: 44.1598, lng: 28.6348 },
+        'Iasi, Romania': { lat: 47.1585, lng: 27.6014 }
+      }
+      return coordinates[location] || { lat: 45.9432, lng: 24.9668 }
+    }
+
+    loadGoogleMaps()
+  }, [vehicles, showTraffic])
+
   return (
     <>
       {/* FLEET CONTENT */}
       <h2 className="text-white tracking-light text-[28px] font-bold leading-tight px-4 text-left pb-3 pt-5">Fleet Overview</h2>
-      <div className="flex px-4 py-3">
-        <div
-          className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl object-cover bg-[#363636]"
-          style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuBQ2-OPtexEwlIaQqUI9QB-Chs9DJQbe7k7Dm0Ed5H9UWtaDwqKihSGM_kiiOTsOS12Lcef5vF1BNNTnji_OctBhQKIvi8c7zqtedCBDjMs6qFKu6qsC9wuypmxs3JQXPnQXzulVS-IodckTEL6IOdjnRefYWQYf0gq9vBYRJxmJMDF8itsXdZEcUrh8knsf4_Sm2EnGO7ZT17BPIpUOJZyOGljsBJmXSVlOvwpTWIguvP7HlNz_BV-HF3KydhKJYv7jO9YYb35C3v7")'}}
-        ></div>
+      <div className="px-4 py-3">
+        <div className="w-full h-[600px] relative bg-white rounded-2xl shadow-2xl overflow-hidden">
+          <div id="fleet-map" className="w-full h-full"></div>
+          
+          {/* Traffic Toggle - Bottom Left */}
+          <div className="absolute bottom-6 left-6 z-20">
+            <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 p-2">
+              <button
+                onClick={() => setShowTraffic(!showTraffic)}
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+                  showTraffic
+                    ? 'bg-green-500 text-white shadow-md'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <span>🚦</span>
+                <span>Traffic</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
       
       {/* Vehicle Details Header with Add Fleet Button */}

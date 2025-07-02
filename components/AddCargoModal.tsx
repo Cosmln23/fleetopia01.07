@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { CargoType, UrgencyLevel, CargoOffer, CargoStatus } from '@/lib/types'
+import { geocodePostal } from '@/lib/geo'
 
 interface AddCargoModalProps {
   isOpen: boolean
@@ -21,6 +22,10 @@ export default function AddCargoModal({ isOpen, onClose, onSubmit }: AddCargoMod
     toAddress: '',
     fromCountry: '',
     toCountry: '',
+    fromPostal: '',
+    fromCity: '',
+    toPostal: '',
+    toCity: '',
     pickupLat: '',
     pickupLng: '',
     deliveryLat: '',
@@ -34,13 +39,31 @@ export default function AddCargoModal({ isOpen, onClose, onSubmit }: AddCargoMod
 
   if (!isOpen) return null
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     // Calculate price per kg
     const weightNum = parseFloat(formData.weight)
     const priceNum = parseFloat(formData.price)
     const pricePerKg = weightNum > 0 ? priceNum / weightNum : 0
+
+    // Geocode pickup and delivery locations
+    let pickupCoords = { lat: 0, lng: 0 }
+    let deliveryCoords = { lat: 0, lng: 0 }
+
+    if (formData.fromPostal && formData.fromCity && formData.fromCountry) {
+      const fromResult = await geocodePostal(formData.fromPostal, formData.fromCity, formData.fromCountry)
+      if (fromResult.success && fromResult.location) {
+        pickupCoords = { lat: fromResult.location.lat, lng: fromResult.location.lng }
+      }
+    }
+
+    if (formData.toPostal && formData.toCity && formData.toCountry) {
+      const toResult = await geocodePostal(formData.toPostal, formData.toCity, formData.toCountry)
+      if (toResult.success && toResult.location) {
+        deliveryCoords = { lat: toResult.location.lat, lng: toResult.location.lng }
+      }
+    }
 
     const cargoData: Omit<CargoOffer, 'id' | 'createdAt' | 'updatedAt'> = {
       title: formData.title,
@@ -54,10 +77,14 @@ export default function AddCargoModal({ isOpen, onClose, onSubmit }: AddCargoMod
       toAddress: formData.toAddress,
       fromCountry: formData.fromCountry,
       toCountry: formData.toCountry,
-      pickupLat: formData.pickupLat ? parseFloat(formData.pickupLat) : undefined,
-      pickupLng: formData.pickupLng ? parseFloat(formData.pickupLng) : undefined,
-      deliveryLat: formData.deliveryLat ? parseFloat(formData.deliveryLat) : undefined,
-      deliveryLng: formData.deliveryLng ? parseFloat(formData.deliveryLng) : undefined,
+      fromPostal: formData.fromPostal,
+      fromCity: formData.fromCity,
+      toPostal: formData.toPostal,
+      toCity: formData.toCity,
+      pickupLat: pickupCoords.lat,
+      pickupLng: pickupCoords.lng,
+      deliveryLat: deliveryCoords.lat,
+      deliveryLng: deliveryCoords.lng,
       loadingDate: formData.loadingDate,
       deliveryDate: formData.deliveryDate,
       postingDate: new Date().toLocaleDateString('en-US', { 
@@ -210,6 +237,50 @@ export default function AddCargoModal({ isOpen, onClose, onSubmit }: AddCargoMod
                   value={formData.toCountry}
                   onChange={(e) => handleInputChange('toCountry', e.target.value)}
                   placeholder="e.g. Romania"
+                  className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
+                />
+              </div>
+              <div>
+                <label className="block text-white text-sm font-medium mb-2">From Postal Code</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.fromPostal || ''}
+                  onChange={(e) => handleInputChange('fromPostal', e.target.value)}
+                  placeholder="e.g. 2595 AA"
+                  className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
+                />
+              </div>
+              <div>
+                <label className="block text-white text-sm font-medium mb-2">To Postal Code</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.toPostal || ''}
+                  onChange={(e) => handleInputChange('toPostal', e.target.value)}
+                  placeholder="e.g. 445100"
+                  className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
+                />
+              </div>
+              <div>
+                <label className="block text-white text-sm font-medium mb-2">From City</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.fromCity || ''}
+                  onChange={(e) => handleInputChange('fromCity', e.target.value)}
+                  placeholder="e.g. The Hague"
+                  className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
+                />
+              </div>
+              <div>
+                <label className="block text-white text-sm font-medium mb-2">To City</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.toCity || ''}
+                  onChange={(e) => handleInputChange('toCity', e.target.value)}
+                  placeholder="e.g. Carei"
                   className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
                 />
               </div>
