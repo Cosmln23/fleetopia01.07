@@ -2,21 +2,76 @@
 
 import { useState } from 'react'
 
+interface Message {
+  text: string
+  isUser: boolean
+  timestamp: string
+}
+
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false)
   const [message, setMessage] = useState('')
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      text: "Hello! I'm your AI assistant for Fleetopia. How can I help you with transport and logistics today?",
+      isUser: false,
+      timestamp: new Date().toISOString()
+    }
+  ])
+  const [isLoading, setIsLoading] = useState(false)
 
   const toggleChat = () => {
     setIsOpen(!isOpen)
   }
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!message.trim()) return
+    if (!message.trim() || isLoading) return
     
-    // Here you would integrate with actual AI service
-    console.log('Sending to AI Agent:', message)
+    const userMessage = message.trim()
     setMessage('')
+    
+    // Add user message
+    setMessages(prev => [...prev, {
+      text: userMessage,
+      isUser: true,
+      timestamp: new Date().toISOString()
+    }])
+    
+    setIsLoading(true)
+    
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: userMessage }),
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to get AI response')
+      }
+      
+      const data = await response.json()
+      
+      // Add AI response
+      setMessages(prev => [...prev, {
+        text: data.response,
+        isUser: false,
+        timestamp: data.timestamp
+      }])
+      
+    } catch (error) {
+      console.error('Chat error:', error)
+      setMessages(prev => [...prev, {
+        text: "Sorry, I'm having trouble connecting right now. Please try again later.",
+        isUser: false,
+        timestamp: new Date().toISOString()
+      }])
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -28,7 +83,9 @@ export default function ChatWidget() {
           <div className="flex items-center justify-between p-4 border-b border-[#363636]">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-[#363636] rounded-full flex items-center justify-center">
-                <span className="text-sm">🤖</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256" className="text-[#adadad]">
+                  <path d="M200,56H56A16,16,0,0,0,40,72V184a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V72A16,16,0,0,0,200,56ZM56,72H200V184H56ZM96,116a12,12,0,1,1,12,12A12,12,0,0,1,96,116Zm52,0a12,12,0,1,1,12,12A12,12,0,0,1,148,116Z"></path>
+                </svg>
               </div>
               <div>
                 <h3 className="text-white font-bold text-sm">AI Agent</h3>
@@ -48,15 +105,49 @@ export default function ChatWidget() {
           {/* Chat Area */}
           <div className="flex-1 p-4 overflow-y-auto">
             <div className="space-y-3">
-              {/* AI Welcome Message */}
-              <div className="flex gap-3">
-                <div className="w-6 h-6 bg-[#363636] rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <span className="text-xs">🤖</span>
+              {messages.map((msg, index) => (
+                <div key={index} className={`flex gap-3 ${msg.isUser ? 'justify-end' : ''}`}>
+                  {!msg.isUser && (
+                    <div className="w-6 h-6 bg-[#363636] rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 256 256" className="text-[#adadad]">
+                        <path d="M200,56H56A16,16,0,0,0,40,72V184a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V72A16,16,0,0,0,200,56ZM56,72H200V184H56ZM96,116a12,12,0,1,1,12,12A12,12,0,0,1,96,116Zm52,0a12,12,0,1,1,12,12A12,12,0,0,1,148,116Z"></path>
+                      </svg>
+                    </div>
+                  )}
+                  <div className={`rounded-lg px-3 py-2 max-w-[85%] ${
+                    msg.isUser 
+                      ? 'bg-white text-black' 
+                      : 'bg-[#2d2d2d] text-white'
+                  }`}>
+                    <p className="text-sm">{msg.text}</p>
+                  </div>
+                  {msg.isUser && (
+                    <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 256 256" className="text-[#363636]">
+                        <path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"></path>
+                      </svg>
+                    </div>
+                  )}
                 </div>
-                <div className="bg-[#2d2d2d] rounded-lg px-3 py-2 max-w-[85%]">
-                  <p className="text-white text-sm">Hello! I'm your AI assistant for Fleetopia. How can I help you with transport and logistics today?</p>
+              ))}
+              
+              {/* Loading indicator */}
+              {isLoading && (
+                <div className="flex gap-3">
+                  <div className="w-6 h-6 bg-[#363636] rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 256 256" className="text-[#adadad]">
+                      <path d="M200,56H56A16,16,0,0,0,40,72V184a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V72A16,16,0,0,0,200,56ZM56,72H200V184H56ZM96,116a12,12,0,1,1,12,12A12,12,0,0,1,96,116Zm52,0a12,12,0,1,1,12,12A12,12,0,0,1,148,116Z"></path>
+                    </svg>
+                  </div>
+                  <div className="bg-[#2d2d2d] rounded-lg px-3 py-2 max-w-[85%]">
+                    <div className="flex space-x-1">
+                      <div className="w-1 h-1 bg-[#adadad] rounded-full animate-bounce"></div>
+                      <div className="w-1 h-1 bg-[#adadad] rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-1 h-1 bg-[#adadad] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -72,7 +163,7 @@ export default function ChatWidget() {
               />
               <button
                 type="submit"
-                disabled={!message.trim()}
+                disabled={!message.trim() || isLoading}
                 className="px-3 py-2 bg-white hover:bg-gray-100 disabled:bg-[#4d4d4d] disabled:text-[#adadad] text-black rounded-lg transition-colors"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256">
