@@ -2,124 +2,43 @@
 
 import { useState } from 'react'
 import { useStickyNavigation } from '@/contexts/StickyNavigationContext'
-import QueryProvider from '@/contexts/QueryProvider'
-import FullNavigationBar from '@/components/FullNavigationBar'
-import ChatWidget from '@/components/ChatWidget'
-import UserChatDropdown from '@/components/UserChatDropdown'
-import NotificationsDropdown from '@/components/NotificationsDropdown'
-import { getUnreadMessagesCount, getUnreadNotificationsCount } from '@/lib/communication-data'
 import { UserButton } from '@clerk/nextjs'
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const { isModalOpen } = useStickyNavigation()
-  const [isChatOpen, setIsChatOpen] = useState(false)
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
-  
-  const unreadMessagesCount = getUnreadMessagesCount()
-  const unreadNotificationsCount = getUnreadNotificationsCount()
   
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.gstatic.com/" crossOrigin="" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700"
-        />
-      </head>
-      <body>
-        <div className="relative flex size-full min-h-screen flex-col bg-[#1a1a1a] dark group/design-root overflow-x-hidden" style={{fontFamily: '"Space Grotesk", "Noto Sans", sans-serif'}}>
-          <div className="layout-container flex h-full grow flex-col">
-            {/* HEADER STICKY - Conditional */}
-            <header className="fixed top-0 left-0 right-0 w-full z-[1000] flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#363636] px-10 py-3 bg-[#1a1a1a]">
-              <div className="flex items-center gap-4 text-white">
-                <div className="w-6 h-6 flex items-center justify-center">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L22 20H2L12 2Z" fill="currentColor"/>
-                    <circle cx="12" cy="16" r="2" fill="#1a1a1a"/>
-                  </svg>
-                </div>
-                <h2 className="text-white text-lg font-bold leading-tight tracking-[-0.015em]">Fleetopia</h2>
-              </div>
-              <div className="flex flex-1 justify-end gap-8">
-                <div className="flex items-center gap-4">
-                  {/* Chat Icon */}
-                  <button
-                    onClick={() => {
-                      setIsChatOpen(!isChatOpen)
-                      setIsNotificationsOpen(false)
-                    }}
-                    className="relative text-[#adadad] hover:text-white transition-colors"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-                      <path d="M216,48H40A16,16,0,0,0,24,64V224a8,8,0,0,0,13.07,6.19L60.69,208H216a16,16,0,0,0,16-16V64A16,16,0,0,0,216,48ZM40,192V64H216V192H62.93a8,8,0,0,0-4.8,1.6Z"></path>
-                    </svg>
-                    {unreadMessagesCount > 0 && (
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">{unreadMessagesCount}</span>
-                      </div>
-                    )}
-                  </button>
-
-                  {/* Notifications Icon */}
-                  <button
-                    onClick={() => {
-                      setIsNotificationsOpen(!isNotificationsOpen)
-                      setIsChatOpen(false)
-                    }}
-                    className="relative text-[#adadad] hover:text-white transition-colors"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-                      <path d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216ZM48,184c7.7-13.24,16-43.92,16-80a64,64,0,1,1,128,0c0,36.05,8.28,66.73,16,80Z"></path>
-                    </svg>
-                    {unreadNotificationsCount > 0 && (
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">{unreadNotificationsCount}</span>
-                      </div>
-                    )}
-                  </button>
-
-                  {/* User Button */}
-                  <UserButton 
-                    appearance={{
-                      elements: {
-                        avatarBox: "w-8 h-8",
-                        userButtonPopoverCard: "bg-[#1a1a1a] border border-[#363636]",
-                        userButtonPopoverText: "text-white"
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-            </header>
-            
-            {/* CONȚINUT DINAMIC - Conditional Spacing */}
-            <div className={`px-40 flex flex-1 justify-center py-5 ${isModalOpen ? 'pt-5 pb-5' : 'pt-[120px] pb-[180px]'}`}>
-              <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
-                <QueryProvider>
-                  {children}
-                </QueryProvider>
+    <>
+      <div className="relative flex size-full min-h-screen flex-col bg-[#1a1a1a] dark group/design-root overflow-x-hidden" style={{fontFamily: '"Space Grotesk", "Noto Sans", sans-serif'}}>
+        <div className="layout-container flex h-full grow flex-col">
+          {/* HEADER STICKY */}
+          <header className="fixed top-0 left-0 right-0 w-full z-[1000] flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#363636] px-10 py-3 bg-[#1a1a1a]">
+            <div className="flex items-center gap-4 text-white">
+              <h2 className="text-white text-lg font-bold leading-tight tracking-[-0.015em]">Fleetopia</h2>
+            </div>
+            <div className="flex flex-1 justify-end gap-8">
+              <div className="flex items-center gap-4">
+                <UserButton 
+                  appearance={{
+                    elements: {
+                      avatarBox: "w-8 h-8",
+                      userButtonPopoverCard: "bg-[#1a1a1a] border border-[#363636]",
+                      userButtonPopoverText: "text-white"
+                    }
+                  }}
+                />
               </div>
             </div>
-            
-            {/* FOOTER STICKY - Conditional */}
-            <footer className={`${isModalOpen ? 'hidden' : 'fixed'} bottom-0 left-0 right-0 w-full z-[1000] bg-[#1a1a1a] border-t border-solid border-t-[#363636] flex justify-center`}>
-              <div className="flex max-w-[960px] flex-1 flex-col">
-                <div className="pb-3">
-                  <FullNavigationBar />
-                </div>
-              </div>
-            </footer>
-            
-            {/* Communication System */}
-            <UserChatDropdown isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
-            <NotificationsDropdown isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} />
-            
-            {/* Sticky Chat Widget */}
-            <ChatWidget />
+          </header>
+          
+          {/* CONTENT */}
+          <div className={`px-40 flex flex-1 justify-center py-5 ${isModalOpen ? 'pt-5 pb-5' : 'pt-[120px] pb-[180px]'}`}>
+            <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
+              {children}
+            </div>
           </div>
         </div>
-      </body>
-    </html>
+      </div>
+    </>
   )
 } 

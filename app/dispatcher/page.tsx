@@ -12,6 +12,8 @@ import { fleetHasGps } from '@/utils/fleetHasGps'
 import { useDispatcherStore } from './state/store'
 import NoGpsModal from './components/NoGpsModal'
 import NoGpsLocationModal from './components/NoGpsLocationModal'
+import AutoAssignSection from './components/AutoAssignSection'
+import AddFleetModal from '@/components/AddFleetModal'
 
 // Temporary interface for production build (replace with real API later)
 interface DispatcherSuggestion {
@@ -50,18 +52,25 @@ interface LevelSettings {
 
 export default function DispatcherPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isAgentActive, setIsAgentActive] = useState(false)
-  const [autoAssignVehicle, setAutoAssignVehicle] = useState(false)
   const [suggestions, setSuggestions] = useState<DispatcherSuggestion[]>([])
   const [agentStats, setAgentStats] = useState<any>(null)
   const [isNoGpsModalOpen, setIsNoGpsModalOpen] = useState(false)
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false)
+  const [isAddFleetModalOpen, setIsAddFleetModalOpen] = useState(false)
   const [selectedVehicleForLocation, setSelectedVehicleForLocation] = useState<any>(null)
   const { setModalOpen } = useStickyNavigation()
   
   // Fleet and GPS state
-  const { fleet } = useFleet()
-  const { gpsFallbackAllowed } = useDispatcherStore()
+  const { fleet, loading: fleetLoading, fleetStatus, refetch: refetchFleet } = useFleet()
+  const { 
+    agentEnabled: isAgentActive, 
+    autoAssignEnabled: autoAssignVehicle,
+    vehicleAutoAssign,
+    gpsFallbackAllowed,
+    setAgentEnabled: setIsAgentActive,
+    setAutoAssignEnabled: setAutoAssignVehicle,
+    setVehicleAutoAssign
+  } = useDispatcherStore()
   const [costSettings, setCostSettings] = useState<CostSettings>({
     driverPay: 500,
     fuel: 300,
@@ -126,22 +135,16 @@ export default function DispatcherPage() {
   const handleAgentToggle = async () => {
     const newState = !isAgentActive
     
-    // Check GPS availability when turning agent ON
-    if (newState && !fleetHasGps(fleet) && !gpsFallbackAllowed) {
-      // If we have vehicles, try to open location modal for first vehicle
-      if (fleet && fleet.length > 0) {
-        const firstVehicle = fleet[0]
-        setSelectedVehicleForLocation(firstVehicle)
-        setIsLocationModalOpen(true)
-        return // Don't toggle yet, wait for location setting
-      } else {
-        // No vehicles available, use original modal
-        setIsNoGpsModalOpen(true)
-        return // Don't toggle yet, wait for user decision
-      }
-    }
-    
+    // Direct toggle - no modals, user decides
     setIsAgentActive(newState)
+    
+    // If deactivating agent, reset all levels and auto-assign
+    if (!newState) {
+      const resetLevels = { L0: false, L1: false, L2: false, L3: false, L4: false }
+      setLevelSettings(resetLevels)
+      localStorage.setItem('levelSettings', JSON.stringify(resetLevels))
+      setAutoAssignVehicle(false)
+    }
     
     // Sync with server
     try {
@@ -152,27 +155,7 @@ export default function DispatcherPage() {
       })
     } catch (error) {
       console.error('Failed to sync agent setting with server:', error)
-      // Fallback to localStorage
       localStorage.setItem('agentActive', JSON.stringify(newState))
-    }
-    
-    // Când agent se dezactivează, toate nivelurile se dezactivează
-    if (!newState) {
-      const resetLevels = { L0: false, L1: false, L2: false, L3: false, L4: false }
-      setLevelSettings(resetLevels)
-      localStorage.setItem('levelSettings', JSON.stringify(resetLevels))
-      // Auto-assign se dezactivează și el când agentul se oprește
-      setAutoAssignVehicle(false)
-      try {
-        await fetch('/api/settings', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ autoAssign: false })
-        })
-      } catch (error) {
-        console.error('Failed to sync auto-assign setting with server:', error)
-        localStorage.setItem('autoAssignVehicle', JSON.stringify(false))
-      }
     }
   }
 
@@ -340,22 +323,16 @@ export default function DispatcherPage() {
             </div>
           </div>
 
-          {/* Auto-Assign Vehicle Toggle - nur sichtbar wenn Agent ON */}
+          {/* Auto-Assign Section - only visible when Agent ON */}
           {isAgentActive && (
-            <div className="flex items-center gap-4 bg-[#1a1a1a] px-4 min-h-12 justify-between">
-              <p className="text-white text-xs font-normal leading-normal flex-1 truncate">Auto-Assign Vehicle</p>
-              <div className="shrink-0">
-                <button
-                  onClick={handleAutoAssignToggle}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
-                    autoAssignVehicle
-                      ? 'bg-green-600 text-white hover:bg-green-700'
-                      : 'bg-[#363636] text-[#adadad] hover:bg-[#4d4d4d]'
-                  }`}
-                >
-                  {autoAssignVehicle ? 'ON' : 'OFF'}
-                </button>
-              </div>
+            <div className="px-4 py-2">
+              <AutoAssignSection
+                isEnabled={autoAssignVehicle}
+                onToggle={handleAutoAssignToggle}
+                fleetStatus={fleetStatus}
+                vehicleAutoAssign={vehicleAutoAssign}
+                onVehicleToggle={setVehicleAutoAssign}
+              />
             </div>
           )}
 
@@ -422,7 +399,11 @@ export default function DispatcherPage() {
           {suggestions.length === 0 ? (
             <div className="p-4">
               <div className="bg-[#2d2d2d] rounded-xl p-6 text-center">
-                <div className="text-[#adadad] text-lg mb-2">🤖</div>
+                <div className="text-[#adadad] mb-2 flex justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256">
+                    <path d="M200,56H56A16,16,0,0,0,40,72V184a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V72A16,16,0,0,0,200,56ZM56,72H200V184H56ZM96,116a12,12,0,1,1,12,12A12,12,0,0,1,96,116Zm52,0a12,12,0,1,1,12,12A12,12,0,0,1,148,116Z"></path>
+                  </svg>
+                </div>
                 <p className="text-[#adadad] text-sm">AI Suggestions - Coming Soon</p>
                 <p className="text-[#666] text-xs mt-1">
                   {!isAgentActive ? 'Turn on Agent to see the interface' : 
@@ -480,7 +461,9 @@ export default function DispatcherPage() {
                     </button>
                   </div>
                   <div className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl flex-1 bg-[#363636] flex items-center justify-center">
-                    <div className="text-[#adadad] text-2xl">📦</div>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256" className="text-[#adadad]">
+                      <path d="M223.68,66.15,135.68,18a15.88,15.88,0,0,0-15.36,0l-88,48.17a16,16,0,0,0-8.32,14v95.64a16,16,0,0,0,8.32,14l88,48.17a15.88,15.88,0,0,0,15.36,0l88-48.17a16,16,0,0,0,8.32-14V80.18A16,16,0,0,0,223.68,66.15ZM128,32l80.34,44L128,120,47.66,76ZM40,90l80,43.78v85.79L40,175.82Zm96,129.57V133.82L216,90v85.82Z"></path>
+                    </svg>
                   </div>
                 </div>
               </div>
@@ -505,6 +488,8 @@ export default function DispatcherPage() {
         isOpen={isNoGpsModalOpen}
         onClose={() => setIsNoGpsModalOpen(false)}
         onContinueWithoutGps={handleContinueWithoutGps}
+        onAddVehicle={() => setIsAddFleetModalOpen(true)}
+        fleetStatus={fleetStatus}
       />
 
       <NoGpsLocationModal
@@ -516,6 +501,15 @@ export default function DispatcherPage() {
         onLocationSet={handleAgentLocationSet}
         vehicleName={selectedVehicleForLocation?.name || 'Vehicle'}
       />
+
+      <AddFleetModal
+        isOpen={isAddFleetModalOpen}
+        onClose={() => setIsAddFleetModalOpen(false)}
+        onSubmit={(vehicleData) => {
+          setIsAddFleetModalOpen(false)
+          refetchFleet() // Refresh fleet data after adding vehicle
+        }}
+      />
     </>
   )
-}/* Force recompile */
+}

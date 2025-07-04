@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import debounce from 'lodash.debounce'
 import { loadGoogle } from '@/lib/google'
@@ -33,100 +33,178 @@ interface NoGpsLocationModalProps {
   onClose: () => void
   onLocationSet: (location: string, lat: number, lng: number) => void
   vehicleName?: string
+  initialLocation?: { lat: number; lng: number }
 }
 
 export default function NoGpsLocationModal({ 
   isOpen, 
   onClose, 
   onLocationSet,
-  vehicleName = 'Vehicle'
+  vehicleName = 'Vehicle',
+  initialLocation
 }: NoGpsLocationModalProps) {
   const mapRef = useRef<HTMLDivElement>(null)
-  const autocompleteRef = useRef<HTMLInputElement>(null)
   const mapInstanceRef = useRef<google.maps.Map | null>(null)
   const markerInstanceRef = useRef<google.maps.Marker | null>(null)
-  const autocompleteInstanceRef = useRef<google.maps.places.Autocomplete | null>(null)
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [marker, setMarker] = useState<google.maps.Marker | null>(null)
-  const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null)
-  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number }>({ lat: 45.943, lng: 24.966 })
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number }>(
+    initialLocation || { lat: 45.943, lng: 24.966 }
+  )
   const [searchValue, setSearchValue] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [initAttempts, setInitAttempts] = useState(0)
+  
+  // New state for custom dropdown
+  const [suggestions, setSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [selectedIndex, setSelectedIndex] = useState(-1)
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
-  // Debounced search to prevent API spam
-  const debouncedSearch = useMemo(
-    () => debounce((query: string) => {
-      console.log('[SEARCH] 🎯 Search triggered for:', query)
+  // Update currentLocation when initialLocation changes
+  useEffect(() => {
+    if (initialLocation) {
+      setCurrentLocation(initialLocation)
+    }
+  }, [initialLocation])
+
+  // New custom search with dropdown suggestions
+  const searchForSuggestions = useCallback(async (query: string) => {
+    if (!query.trim() || query.length < 2) {
+      setSuggestions([])
+      setShowSuggestions(false)
+      setLoadingSuggestions(false)
+      return
+    }
+
+    if (!window.google || !window.google.maps || !window.google.maps.places) {
+      console.log('[SEARCH] ❌ Google API not ready')
+      return
+    }
+
+    console.log('[SEARCH] 🔍 Searching suggestions for:', query)
+    setLoadingSuggestions(true)
+
+    try {
+      const service = new google.maps.places.AutocompleteService()
       
-      if (!query.trim()) {
-        console.log('[SEARCH] ⏭️ Skipping empty query')
-        return
-      }
-      
-      // Only search if map is fully loaded
-      if (!map || !marker || isLoading) {
-        console.log('[SEARCH] ⚠️ Map not ready yet, search skipped')
-        return
-      }
-      
-      if (!window.google || !window.google.maps || !window.google.maps.places) {
-        console.log('[SEARCH] ❌ Google API not ready')
-        return
-      }
-      
-      console.log('[SEARCH] 🔍 Starting search for:', query)
-      
-      try {
-        const service = new google.maps.places.AutocompleteService()
-        
-        service.getPlacePredictions(
-          { 
-            input: query,
-            types: ['geocode']
-          },
-          (predictions, status) => {
-            console.log('[SEARCH] 📊 API Response - Status:', status)
-            
-            if (status !== google.maps.places.PlacesServiceStatus.OK) {
-              console.warn('[SEARCH] ⚠️ Search failed with status:', status)
-              return
-            }
-            
-            if (predictions && predictions.length > 0) {
-              console.log('[SEARCH] ✅ Found predictions, getting details for first result')
-              const placesService = new google.maps.places.PlacesService(mapRef.current!)
-              placesService.getDetails(
-                { placeId: predictions[0].place_id },
-                (place, detailStatus) => {
-                  console.log('[SEARCH] 📊 Place details status:', detailStatus)
-                  
-                  if (detailStatus === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
-                    const newPos = {
-                      lat: place.geometry.location.lat(),
-                      lng: place.geometry.location.lng()
-                    }
-                    console.log('[SEARCH] ✅ Found location:', newPos)
-                    
-                    // Map and marker are guaranteed to exist here
-                    updateMapLocation(newPos, map, marker, place.formatted_address || query)
-                  } else {
-                    console.error('[SEARCH] ❌ Failed to get place details:', detailStatus)
-                  }
-                }
-              )
-            } else {
-              console.log('[SEARCH] 📊 No predictions found')
-            }
+      service.getPlacePredictions(
+        { 
+          input: query,
+          types: ['geocode']
+        },
+        (predictions, status) => {
+          console.log('[SEARCH] 📊 API Response - Status:', status)
+          setLoadingSuggestions(false)
+          
+          if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+            // Limit to 8 suggestions for better UX
+            const limitedPredictions = predictions.slice(0, 8)
+            setSuggestions(limitedPredictions)
+            setShowSuggestions(true)
+            setSelectedIndex(-1)
+            console.log('[SEARCH] ✅ Found', limitedPredictions.length, 'suggestions')
+          } else {
+            setSuggestions([])
+            setShowSuggestions(false)
+            console.warn('[SEARCH] ⚠️ Search failed with status:', status)
           }
-        )
-      } catch (error) {
-        console.error('[SEARCH] ❌ Search error:', error)
-      }
-    }, 300),
-    [map, marker, isLoading]
+        }
+      )
+    } catch (error) {
+      console.error('[SEARCH] ❌ Search error:', error)
+      setLoadingSuggestions(false)
+      setSuggestions([])
+      setShowSuggestions(false)
+    }
+  }, [])
+
+  // Debounced search with longer delay (800ms for less aggressive)
+  const debouncedSearchSuggestions = useMemo(
+    () => debounce(searchForSuggestions, 800),
+    [searchForSuggestions]
   )
+
+  // Handle suggestion selection
+  const selectSuggestion = useCallback(async (prediction: google.maps.places.AutocompletePrediction) => {
+    if (!mapRef.current) return
+
+    console.log('[SEARCH] 🎯 Selecting suggestion:', prediction.description)
+    setSearchValue(prediction.description)
+    setShowSuggestions(false)
+    setSuggestions([])
+    setSelectedIndex(-1)
+
+    try {
+      const placesService = new google.maps.places.PlacesService(mapRef.current)
+      placesService.getDetails(
+        { placeId: prediction.place_id },
+        (place, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+            const newPos = {
+              lat: place.geometry.location.lat(),
+              lng: place.geometry.location.lng()
+            }
+            console.log('[SEARCH] ✅ Selected location:', newPos)
+            
+            if (map && marker) {
+              updateMapLocation(newPos, map, marker, place.formatted_address || prediction.description)
+            }
+          } else {
+            console.error('[SEARCH] ❌ Failed to get place details:', status)
+          }
+        }
+      )
+    } catch (error) {
+      console.error('[SEARCH] ❌ Error selecting suggestion:', error)
+    }
+  }, [map, marker])
+
+  // Handle keyboard navigation
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!showSuggestions || suggestions.length === 0) return
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setSelectedIndex(prev => prev < suggestions.length - 1 ? prev + 1 : 0)
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setSelectedIndex(prev => prev > 0 ? prev - 1 : suggestions.length - 1)
+        break
+      case 'Enter':
+        e.preventDefault()
+        if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+          selectSuggestion(suggestions[selectedIndex])
+        }
+        break
+      case 'Escape':
+        e.preventDefault()
+        setShowSuggestions(false)
+        setSuggestions([])
+        setSelectedIndex(-1)
+        if (searchInputRef.current) {
+          searchInputRef.current.blur()
+        }
+        break
+    }
+  }, [showSuggestions, suggestions, selectedIndex, selectSuggestion])
+
+  // Click outside to close suggestions
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchInputRef.current && !searchInputRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false)
+        setSelectedIndex(-1)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Cleanup function
   const cleanupMap = () => {
@@ -139,9 +217,6 @@ export default function NoGpsLocationModal({
     if (markerInstanceRef.current) {
       google.maps.event.clearInstanceListeners(markerInstanceRef.current)
     }
-    if (autocompleteInstanceRef.current) {
-      google.maps.event.clearInstanceListeners(autocompleteInstanceRef.current)
-    }
     
     // Clear map container manually
     if (mapRef.current) {
@@ -151,12 +226,10 @@ export default function NoGpsLocationModal({
     // Reset refs
     mapInstanceRef.current = null
     markerInstanceRef.current = null
-    autocompleteInstanceRef.current = null
     
     // Reset state
     setMap(null)
     setMarker(null)
-    setAutocomplete(null)
     setIsLoading(true)
     setError(null)
     
@@ -254,28 +327,8 @@ export default function NoGpsLocationModal({
             markerInstanceRef.current = googleMarker
             console.log('[MAP] ✅ Marker created, setting up autocomplete...')
 
-            // Initialize autocomplete - Places API is guaranteed to be available
-            if (autocompleteRef.current && window.google.maps.places) {
-              const googleAutocomplete = new google.maps.places.Autocomplete(autocompleteRef.current, {
-                types: ['geocode']
-              })
-
-              googleAutocomplete.addListener('place_changed', () => {
-                const place = googleAutocomplete.getPlace()
-                if (place.geometry?.location) {
-                  const newPos = {
-                    lat: place.geometry.location.lat(),
-                    lng: place.geometry.location.lng()
-                  }
-                  updateMapLocation(newPos, googleMap, googleMarker, place.formatted_address || '')
-                }
-              })
-
-              // Store in ref for cleanup
-              autocompleteInstanceRef.current = googleAutocomplete
-              setAutocomplete(googleAutocomplete)
-              console.log('[MAP] ✅ Autocomplete initialized')
-            }
+            // Skip Google's aggressive autocomplete - using custom dropdown instead
+            console.log('[MAP] ✅ Skipping Google Autocomplete - using custom dropdown')
 
             // Handle marker drag
             googleMarker.addListener('dragstart', () => {
@@ -292,9 +345,6 @@ export default function NoGpsLocationModal({
                 setCurrentLocation(newPos)
                 googleMap.panTo(newPos)
                 setSearchValue('')
-                if (autocompleteRef.current) {
-                  autocompleteRef.current.value = ''
-                }
               }
             })
 
@@ -378,9 +428,6 @@ export default function NoGpsLocationModal({
                   setCurrentLocation(newPos)
                   googleMap.panTo(newPos)
                   setSearchValue('')
-                  if (autocompleteRef.current) {
-                    autocompleteRef.current.value = ''
-                  }
                 }
               })
 
@@ -464,9 +511,6 @@ export default function NoGpsLocationModal({
     // Update search value if address provided
     if (address) {
       setSearchValue(address)
-      if (autocompleteRef.current) {
-        autocompleteRef.current.value = address
-      }
     }
   }
 
@@ -614,24 +658,74 @@ export default function NoGpsLocationModal({
                   <span>Use my current location</span>
                 </button>
 
-                {/* Search input */}
-                <div className="relative">
+                {/* Search input with custom dropdown */}
+                <div className="relative" ref={searchInputRef}>
                   <input
-                    ref={autocompleteRef}
                     type="text"
                     value={searchValue}
                     onChange={(e) => {
                       setSearchValue(e.target.value)
-                      debouncedSearch(e.target.value)
+                      debouncedSearchSuggestions(e.target.value)
+                    }}
+                    onKeyDown={handleKeyDown}
+                    onFocus={() => {
+                      if (suggestions.length > 0) {
+                        setShowSuggestions(true)
+                      }
                     }}
                     placeholder="Search address / city globally"
                     className="w-full bg-[#363636] border border-[#4d4d4d] rounded-xl px-4 py-2 pr-10 text-white placeholder-[#adadad] focus:border-[#adadad] focus:outline-none transition-colors font-medium text-sm"
+                    autoComplete="off"
                   />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[#adadad]" data-icon="MagnifyingGlass" data-size="16px" data-weight="regular">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" fill="currentColor" viewBox="0 0 256 256">
-                      <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path>
-                    </svg>
+                  
+                  {/* Search icon or loading spinner */}
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[#adadad]">
+                    {loadingSuggestions ? (
+                      <div className="animate-spin">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" fill="currentColor" viewBox="0 0 256 256">
+                          <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Z" opacity=".2"></path>
+                          <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm78.38,47.66a7.89,7.89,0,0,1-2.15.94,15.93,15.93,0,0,1-4.16.54c-13.14,0-26.13-11.7-35.2-23.79C158.73,37.79,144.67,32,128,32S97.27,37.79,91.13,49.35C82.06,61.44,69.07,73.14,55.93,73.14a15.93,15.93,0,0,1-4.16-.54,7.89,7.89,0,0,1-2.15-.94A88.08,88.08,0,0,1,128,40C170.53,40,205.94,62.81,206.38,71.66Z"></path>
+                        </svg>
+                      </div>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" fill="currentColor" viewBox="0 0 256 256">
+                        <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path>
+                      </svg>
+                    )}
                   </div>
+                  
+                  {/* Custom suggestions dropdown */}
+                  {showSuggestions && suggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-[#2d2d2d] border border-[#4d4d4d] rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto">
+                      {suggestions.map((suggestion, index) => (
+                        <button
+                          key={suggestion.place_id}
+                          onClick={() => selectSuggestion(suggestion)}
+                          className={`w-full text-left px-4 py-3 hover:bg-[#363636] transition-colors border-b border-[#363636] last:border-b-0 first:rounded-t-xl last:rounded-b-xl ${
+                            index === selectedIndex ? 'bg-[#363636]' : ''
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="text-[#adadad] flex-shrink-0">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256">
+                                <path d="M128,64a40,40,0,1,0,40,40A40,40,0,0,0,128,64Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,128ZM128,16a88.1,88.1,0,0,0-88,88c0,31.4,14.51,64.68,42,96.25a254.19,254.19,0,0,0,41.45,38.3,8,8,0,0,0,9.18,0A254.19,254.19,0,0,0,174,200.25c27.45-31.57,42-64.85,42-96.25A88.1,88.1,0,0,0,128,16Zm0,206c-16.53-13-72-60.75-72-118a72,72,0,0,1,144,0C200,161.23,144.53,209,128,222Z"></path>
+                              </svg>
+                            </div>
+                            <div>
+                              <div className="text-white text-sm font-medium">
+                                {suggestion.structured_formatting?.main_text || suggestion.description}
+                              </div>
+                              {suggestion.structured_formatting?.secondary_text && (
+                                <div className="text-[#adadad] text-xs">
+                                  {suggestion.structured_formatting.secondary_text}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Instructions - Fleetopia styled */}

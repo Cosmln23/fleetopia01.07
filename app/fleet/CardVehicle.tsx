@@ -20,9 +20,10 @@ interface CardVehicleProps {
   vehicle: Vehicle
   onLocationUpdate?: () => void
   onVehicleDeleted?: () => void
+  onCardClick?: (lat: number, lng: number) => void
 }
 
-export default function CardVehicle({ vehicle, onLocationUpdate, onVehicleDeleted }: CardVehicleProps) {
+export default function CardVehicle({ vehicle, onLocationUpdate, onVehicleDeleted, onCardClick }: CardVehicleProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -70,9 +71,20 @@ export default function CardVehicle({ vehicle, onLocationUpdate, onVehicleDelete
 
   const hasGPS = vehicle.has_gps || (vehicle.gps_device_id !== null && vehicle.gps_device_id !== undefined)
   
+  const handleCardClick = () => {
+    const lat = vehicle.lat || vehicle.last_manual_lat
+    const lng = vehicle.lng || vehicle.last_manual_lng
+    if (lat && lng && onCardClick) {
+      onCardClick(lat, lng)
+    }
+  }
+  
   return (
     <>
-      <div className="w-64 bg-[#2d2d2d] rounded-lg p-4 flex flex-col gap-3">
+      <div 
+        className="w-64 bg-[#2d2d2d] rounded-lg p-4 flex flex-col gap-3 cursor-pointer hover:bg-[#363636] transition-colors"
+        onClick={handleCardClick}
+      >
         {/* Header with truck icon, GPS badge, and delete button */}
         <div className="flex items-center justify-between">
           <div className="text-[#adadad]" data-icon="Truck" data-size="24px" data-weight="regular">
@@ -91,7 +103,10 @@ export default function CardVehicle({ vehicle, onLocationUpdate, onVehicleDelete
               </span>
             )}
             <button
-              onClick={() => setIsDeleteConfirmOpen(true)}
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsDeleteConfirmOpen(true)
+              }}
               className="bg-[#2d2d2d] hover:bg-[#363636] text-[#adadad] hover:text-white p-1.5 rounded transition-colors border border-[#4d4d4d]"
               title="Delete vehicle"
             >
@@ -111,10 +126,13 @@ export default function CardVehicle({ vehicle, onLocationUpdate, onVehicleDelete
           <p className="text-[#adadad] text-xs">{vehicle.capacity}t capacity</p>
         </div>
 
-        {/* Set location button - only show if no GPS */}
+        {/* Location button - show for all vehicles without GPS */}
         {!hasGPS && (
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsModalOpen(true)
+            }}
             className="w-full bg-[#363636] hover:bg-[#4d4d4d] text-white px-3 py-2 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2"
           >
             <div className="text-white" data-icon="MapPin" data-size="14px" data-weight="regular">
@@ -122,7 +140,9 @@ export default function CardVehicle({ vehicle, onLocationUpdate, onVehicleDelete
                 <path d="M128,64a40,40,0,1,0,40,40A40,40,0,0,0,128,64Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,128ZM128,16a88.1,88.1,0,0,0-88,88c0,31.4,14.51,64.68,42,96.25a254.19,254.19,0,0,0,41.45,38.3,8,8,0,0,0,9.18,0A254.19,254.19,0,0,0,174,200.25c27.45-31.57,42-64.85,42-96.25A88.1,88.1,0,0,0,128,16Zm0,206c-16.53-13-72-60.75-72-118a72,72,0,0,1,144,0C200,161.23,144.53,209,128,222Z"></path>
               </svg>
             </div>
-            <span>Set location</span>
+            <span>
+              {(vehicle.last_manual_lat && vehicle.last_manual_lng) ? 'Update location' : 'Add location'}
+            </span>
           </button>
         )}
 
@@ -145,6 +165,10 @@ export default function CardVehicle({ vehicle, onLocationUpdate, onVehicleDelete
         onClose={() => setIsModalOpen(false)}
         onLocationSet={handleSetLocation}
         vehicleName={vehicle.name}
+        initialLocation={vehicle.last_manual_lat && vehicle.last_manual_lng ? {
+          lat: vehicle.last_manual_lat,
+          lng: vehicle.last_manual_lng
+        } : undefined}
       />
 
       {/* Delete Confirmation Modal */}
