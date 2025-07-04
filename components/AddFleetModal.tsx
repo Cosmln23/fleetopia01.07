@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface VehicleData {
   name: string
@@ -15,6 +15,14 @@ interface VehicleData {
   }
   driver: string
   status: 'Active' | 'Inactive'
+  gpsDeviceId?: string
+}
+
+interface GpsDevice {
+  id: string
+  label: string
+  imei: string
+  assigned: boolean
 }
 
 interface AddFleetModalProps {
@@ -33,8 +41,34 @@ export default function AddFleetModal({ isOpen, onClose, onSubmit }: AddFleetMod
     location: '',
     coordinates: '',
     driver: '',
-    status: 'Active' as const
+    status: 'Active' as const,
+    gpsDeviceId: ''
   })
+
+  const [gpsDevices, setGpsDevices] = useState<GpsDevice[]>([])
+  const [loadingGps, setLoadingGps] = useState(false)
+
+  // Fetch available GPS devices when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchGpsDevices()
+    }
+  }, [isOpen])
+
+  const fetchGpsDevices = async () => {
+    setLoadingGps(true)
+    try {
+      const response = await fetch('/api/gps-devices?free=1')
+      if (response.ok) {
+        const devices = await response.json()
+        setGpsDevices(devices)
+      }
+    } catch (error) {
+      console.error('Error fetching GPS devices:', error)
+    } finally {
+      setLoadingGps(false)
+    }
+  }
 
   if (!isOpen) return null
 
@@ -58,7 +92,8 @@ export default function AddFleetModal({ isOpen, onClose, onSubmit }: AddFleetMod
       location: formData.location,
       coordinates,
       driver: formData.driver,
-      status: formData.status
+      status: formData.status,
+      gpsDeviceId: formData.gpsDeviceId || undefined
     }
 
     onSubmit(vehicleData)
@@ -74,7 +109,8 @@ export default function AddFleetModal({ isOpen, onClose, onSubmit }: AddFleetMod
       location: '',
       coordinates: '',
       driver: '',
-      status: 'Active'
+      status: 'Active',
+      gpsDeviceId: ''
     })
   }
 
@@ -84,8 +120,8 @@ export default function AddFleetModal({ isOpen, onClose, onSubmit }: AddFleetMod
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#1a1a1a] rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-[#1a1a1a] border-b border-[#363636] px-6 py-4 flex justify-between items-center">
+      <div className="bg-[#1a1a1a] rounded-xl w-full max-w-lg max-h-[85vh] flex flex-col">
+        <div className="flex-shrink-0 bg-[#1a1a1a] border-b border-[#363636] px-6 py-4 flex justify-between items-center rounded-t-xl">
           <h2 className="text-white text-xl font-bold">Add Fleet Vehicle</h2>
           <button
             onClick={onClose}
@@ -97,139 +133,170 @@ export default function AddFleetModal({ isOpen, onClose, onSubmit }: AddFleetMod
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
-          {/* Vehicle Name */}
-          <div>
-            <label className="block text-white text-sm font-medium mb-2">Vehicle Name</label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
-              placeholder="e.g. Truck Alpha"
-              className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
-            />
-          </div>
-
-          {/* License Plate */}
-          <div>
-            <label className="block text-white text-sm font-medium mb-2">License Plate</label>
-            <input
-              type="text"
-              required
-              value={formData.licensePlate}
-              onChange={(e) => handleInputChange('licensePlate', e.target.value)}
-              placeholder="e.g. ABC123"
-              className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            {/* Vehicle Type */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <form id="vehicle-form" onSubmit={handleSubmit} className="space-y-4">
+            {/* Vehicle Name */}
             <div>
-              <label className="block text-white text-sm font-medium mb-2">Vehicle Type</label>
-              <select
+              <label className="block text-white text-sm font-medium mb-2">Vehicle Name</label>
+              <input
+                type="text"
                 required
-                value={formData.vehicleType}
-                onChange={(e) => handleInputChange('vehicleType', e.target.value)}
-                className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white focus:outline-none focus:border-white"
-              >
-                <option value="Truck">Truck</option>
-                <option value="Van">Van</option>
-                <option value="Trailer">Trailer</option>
-                <option value="Semi-Truck">Semi-Truck</option>
-                <option value="Refrigerated Truck">Refrigerated Truck</option>
-              </select>
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                placeholder="e.g. Truck Alpha"
+                className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
+              />
             </div>
 
-            {/* Capacity */}
+            {/* License Plate */}
             <div>
-              <label className="block text-white text-sm font-medium mb-2">Capacity (tons)</label>
+              <label className="block text-white text-sm font-medium mb-2">License Plate</label>
+              <input
+                type="text"
+                required
+                value={formData.licensePlate}
+                onChange={(e) => handleInputChange('licensePlate', e.target.value)}
+                placeholder="e.g. ABC123"
+                className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {/* Vehicle Type */}
+              <div>
+                <label className="block text-white text-sm font-medium mb-2">Vehicle Type</label>
+                <select
+                  required
+                  value={formData.vehicleType}
+                  onChange={(e) => handleInputChange('vehicleType', e.target.value)}
+                  className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white focus:outline-none focus:border-white"
+                >
+                  <option value="Truck">Truck</option>
+                  <option value="Van">Van</option>
+                  <option value="Trailer">Trailer</option>
+                  <option value="Semi-Truck">Semi-Truck</option>
+                  <option value="Refrigerated Truck">Refrigerated Truck</option>
+                </select>
+              </div>
+
+              {/* Capacity */}
+              <div>
+                <label className="block text-white text-sm font-medium mb-2">Capacity (tons)</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="0.5"
+                  value={formData.capacity}
+                  onChange={(e) => handleInputChange('capacity', e.target.value)}
+                  placeholder="e.g. 25"
+                  className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
+                />
+              </div>
+            </div>
+
+            {/* Fuel Consumption */}
+            <div>
+              <label className="block text-white text-sm font-medium mb-2">Fuel Consumption (L/100km)</label>
               <input
                 type="number"
                 required
                 min="0"
-                step="0.5"
-                value={formData.capacity}
-                onChange={(e) => handleInputChange('capacity', e.target.value)}
-                placeholder="e.g. 25"
+                step="0.1"
+                value={formData.consumption}
+                onChange={(e) => handleInputChange('consumption', e.target.value)}
+                placeholder="e.g. 35.5"
                 className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
               />
             </div>
-          </div>
 
-          {/* Fuel Consumption */}
-          <div>
-            <label className="block text-white text-sm font-medium mb-2">Fuel Consumption (L/100km)</label>
-            <input
-              type="number"
-              required
-              min="0"
-              step="0.1"
-              value={formData.consumption}
-              onChange={(e) => handleInputChange('consumption', e.target.value)}
-              placeholder="e.g. 35.5"
-              className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
-            />
-          </div>
-
-          {/* Location */}
-          <div>
-            <label className="block text-white text-sm font-medium mb-2">Current Location</label>
-            <input
-              type="text"
-              required
-              value={formData.location}
-              onChange={(e) => handleInputChange('location', e.target.value)}
-              placeholder="e.g. Bucharest, Romania"
-              className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
-            />
-          </div>
-
-          {/* GPS Coordinates */}
-          <div>
-            <label className="block text-white text-sm font-medium mb-2">GPS Coordinates (optional)</label>
-            <input
-              type="text"
-              value={formData.coordinates}
-              onChange={(e) => handleInputChange('coordinates', e.target.value)}
-              placeholder="e.g. 44.4268, 26.1025"
-              className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
-            />
-            <p className="text-[#adadad] text-xs mt-1">Enter as: latitude, longitude</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            {/* Driver */}
+            {/* Location */}
             <div>
-              <label className="block text-white text-sm font-medium mb-2">Driver</label>
+              <label className="block text-white text-sm font-medium mb-2">Current Location</label>
               <input
                 type="text"
                 required
-                value={formData.driver}
-                onChange={(e) => handleInputChange('driver', e.target.value)}
-                placeholder="e.g. John Doe"
+                value={formData.location}
+                onChange={(e) => handleInputChange('location', e.target.value)}
+                placeholder="e.g. Bucharest, Romania"
                 className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
               />
             </div>
 
-            {/* Status */}
+            {/* GPS Coordinates */}
             <div>
-              <label className="block text-white text-sm font-medium mb-2">Status</label>
-              <select
-                required
-                value={formData.status}
-                onChange={(e) => handleInputChange('status', e.target.value as 'Active' | 'Inactive')}
-                className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white focus:outline-none focus:border-white"
-              >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
+              <label className="block text-white text-sm font-medium mb-2">GPS Coordinates (optional)</label>
+              <input
+                type="text"
+                value={formData.coordinates}
+                onChange={(e) => handleInputChange('coordinates', e.target.value)}
+                placeholder="e.g. 44.4268, 26.1025"
+                className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
+              />
+              <p className="text-[#adadad] text-xs mt-1">Enter as: latitude, longitude</p>
             </div>
-          </div>
 
-          {/* Submit Buttons */}
-          <div className="flex gap-3 pt-4">
+            {/* GPS Device */}
+            <div>
+              <label className="block text-white text-sm font-medium mb-2">GPS Device (optional)</label>
+              <select
+                value={formData.gpsDeviceId}
+                onChange={(e) => handleInputChange('gpsDeviceId', e.target.value)}
+                disabled={loadingGps}
+                className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white focus:outline-none focus:border-white disabled:opacity-50"
+              >
+                <option value="">No GPS device</option>
+                {loadingGps ? (
+                  <option value="" disabled>Loading GPS devices...</option>
+                ) : (
+                  gpsDevices.map(device => (
+                    <option key={device.id} value={device.id}>
+                      {device.label} (IMEI: {device.imei})
+                    </option>
+                  ))
+                )}
+              </select>
+              {gpsDevices.length === 0 && !loadingGps && (
+                <p className="text-[#adadad] text-xs mt-1">
+                  No free GPS devices available. Add one in Settings → GPS Devices
+                </p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {/* Driver */}
+              <div>
+                <label className="block text-white text-sm font-medium mb-2">Driver</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.driver}
+                  onChange={(e) => handleInputChange('driver', e.target.value)}
+                  placeholder="e.g. John Doe"
+                  className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
+                />
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="block text-white text-sm font-medium mb-2">Status</label>
+                <select
+                  required
+                  value={formData.status}
+                  onChange={(e) => handleInputChange('status', e.target.value as 'Active' | 'Inactive')}
+                  className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white focus:outline-none focus:border-white"
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        {/* Fixed Bottom Buttons */}
+        <div className="flex-shrink-0 bg-[#1a1a1a] border-t border-[#363636] px-6 py-4 rounded-b-xl">
+          <div className="flex gap-3">
             <button
               type="button"
               onClick={onClose}
@@ -239,12 +306,13 @@ export default function AddFleetModal({ isOpen, onClose, onSubmit }: AddFleetMod
             </button>
             <button
               type="submit"
+              form="vehicle-form"
               className="flex-1 bg-white hover:bg-gray-100 text-black py-3 px-4 rounded-lg font-medium transition-colors"
             >
               Add Vehicle
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   )

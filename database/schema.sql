@@ -60,6 +60,35 @@ CREATE TABLE IF NOT EXISTS users (
   created_ts BIGINT NOT NULL
 );
 
+-- Fleet Management Tables
+CREATE TABLE IF NOT EXISTS vehicles (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  license_plate TEXT NOT NULL,
+  type TEXT NOT NULL,
+  capacity REAL,
+  status TEXT DEFAULT 'active',
+  driver_name TEXT,
+  driver_phone TEXT,
+  fuel_type TEXT DEFAULT 'diesel',
+  gps_device_id TEXT,
+  last_manual_lat REAL,
+  last_manual_lng REAL,
+  last_manual_location TEXT,
+  created_ts BIGINT NOT NULL,
+  updated_ts BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS gps_devices (
+  id TEXT PRIMARY KEY,
+  label TEXT NOT NULL,
+  imei TEXT,
+  api_key TEXT,
+  assigned BOOLEAN DEFAULT false,
+  created_ts BIGINT NOT NULL,
+  updated_ts BIGINT NOT NULL
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_cargo_status ON cargo(status);
 CREATE INDEX IF NOT EXISTS idx_cargo_created ON cargo(created_ts);
@@ -69,3 +98,5 @@ CREATE INDEX IF NOT EXISTS idx_cargo_urgency ON cargo(urgency);
 CREATE INDEX IF NOT EXISTS idx_cargo_price ON cargo(price);
 CREATE INDEX IF NOT EXISTS idx_offer_cargo ON offer_requests(cargo_id);
 CREATE INDEX IF NOT EXISTS idx_offer_status ON offer_requests(status);
+CREATE INDEX IF NOT EXISTS idx_vehicles_gps_device ON vehicles(gps_device_id);
+CREATE INDEX IF NOT EXISTS idx_gps_devices_assigned ON gps_devices(assigned);

@@ -7,6 +7,11 @@ import { useStickyNavigation } from '@/contexts/StickyNavigationContext'
 // Mock API import commented out for production build
 // import { agentMockApi, type DispatcherSuggestion } from '@/lib/__mocks__/agent-mock-data'
 import { formatPrice } from '@/lib/formatters'
+import { useFleet } from './hooks/useFleet'
+import { fleetHasGps } from '@/utils/fleetHasGps'
+import { useDispatcherStore } from './state/store'
+import NoGpsModal from './components/NoGpsModal'
+import NoGpsLocationModal from './components/NoGpsLocationModal'
 
 // Temporary interface for production build (replace with real API later)
 interface DispatcherSuggestion {
@@ -49,7 +54,14 @@ export default function DispatcherPage() {
   const [autoAssignVehicle, setAutoAssignVehicle] = useState(false)
   const [suggestions, setSuggestions] = useState<DispatcherSuggestion[]>([])
   const [agentStats, setAgentStats] = useState<any>(null)
+  const [isNoGpsModalOpen, setIsNoGpsModalOpen] = useState(false)
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false)
+  const [selectedVehicleForLocation, setSelectedVehicleForLocation] = useState<any>(null)
   const { setModalOpen } = useStickyNavigation()
+  
+  // Fleet and GPS state
+  const { fleet } = useFleet()
+  const { gpsFallbackAllowed } = useDispatcherStore()
   const [costSettings, setCostSettings] = useState<CostSettings>({
     driverPay: 500,
     fuel: 300,
@@ -113,6 +125,22 @@ export default function DispatcherPage() {
 
   const handleAgentToggle = async () => {
     const newState = !isAgentActive
+    
+    // Check GPS availability when turning agent ON
+    if (newState && !fleetHasGps(fleet) && !gpsFallbackAllowed) {
+      // If we have vehicles, try to open location modal for first vehicle
+      if (fleet && fleet.length > 0) {
+        const firstVehicle = fleet[0]
+        setSelectedVehicleForLocation(firstVehicle)
+        setIsLocationModalOpen(true)
+        return // Don't toggle yet, wait for location setting
+      } else {
+        // No vehicles available, use original modal
+        setIsNoGpsModalOpen(true)
+        return // Don't toggle yet, wait for user decision
+      }
+    }
+    
     setIsAgentActive(newState)
     
     // Sync with server
@@ -145,6 +173,58 @@ export default function DispatcherPage() {
         console.error('Failed to sync auto-assign setting with server:', error)
         localStorage.setItem('autoAssignVehicle', JSON.stringify(false))
       }
+    }
+  }
+
+  const handleContinueWithoutGps = async () => {
+    // This will actually toggle the agent ON after user confirms
+    setIsAgentActive(true)
+    
+    // Sync with server
+    try {
+      await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentOn: true })
+      })
+    } catch (error) {
+      console.error('Failed to sync agent setting with server:', error)
+      localStorage.setItem('agentActive', JSON.stringify(true))
+    }
+  }
+
+  const handleAgentLocationSet = async (location: string, lat: number, lng: number) => {
+    if (!selectedVehicleForLocation) return
+
+    try {
+      // Update vehicle location
+      const response = await fetch(`/api/vehicles/${selectedVehicleForLocation.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          last_manual_lat: lat,
+          last_manual_lng: lng,
+          last_manual_location: location
+        })
+      })
+
+      if (response.ok) {
+        // Set GPS fallback allowed and turn on agent
+        const { setGpsFallbackAllowed } = useDispatcherStore.getState()
+        setGpsFallbackAllowed(true)
+        
+        // Now actually toggle the agent ON
+        setIsAgentActive(true)
+        
+        // Sync with server
+        await fetch('/api/settings', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ agentOn: true })
+        })
+      }
+    } catch (error) {
+      console.error('Error updating vehicle location:', error)
     }
   }
 
@@ -419,6 +499,22 @@ export default function DispatcherPage() {
         }}
         currentSettings={costSettings}
         onSave={handleSaveSettings}
+      />
+
+      <NoGpsModal
+        isOpen={isNoGpsModalOpen}
+        onClose={() => setIsNoGpsModalOpen(false)}
+        onContinueWithoutGps={handleContinueWithoutGps}
+      />
+
+      <NoGpsLocationModal
+        isOpen={isLocationModalOpen}
+        onClose={() => {
+          setIsLocationModalOpen(false)
+          setSelectedVehicleForLocation(null)
+        }}
+        onLocationSet={handleAgentLocationSet}
+        vehicleName={selectedVehicleForLocation?.name || 'Vehicle'}
       />
     </>
   )

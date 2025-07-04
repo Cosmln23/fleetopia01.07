@@ -232,4 +232,204 @@ export const offerDb = {
   }
 }
 
+// Vehicle CRUD operations
+export const vehicleDb = {
+  // Get all vehicles with GPS info
+  async getAll(userId?: string) {
+    const result = await query(`
+      SELECT 
+        v.*,
+        g.label as gps_label,
+        g.imei as gps_imei,
+        g.assigned as gps_assigned,
+        CASE 
+          WHEN v.gps_device_id IS NOT NULL THEN true
+          ELSE false
+        END as has_gps
+      FROM vehicles v
+      LEFT JOIN gps_devices g ON v.gps_device_id = g.id
+      ORDER BY v.created_ts DESC
+    `)
+    return result.rows
+  },
+
+  // Get vehicle by ID
+  async getById(id: string) {
+    const result = await query(`
+      SELECT 
+        v.*,
+        g.label as gps_label,
+        g.imei as gps_imei,
+        g.assigned as gps_assigned
+      FROM vehicles v
+      LEFT JOIN gps_devices g ON v.gps_device_id = g.id
+      WHERE v.id = $1
+    `, [id])
+    return result.rows[0] || null
+  },
+
+  // Create new vehicle
+  async create(vehicle: any) {
+    const result = await query(`
+      INSERT INTO vehicles (
+        id, name, license_plate, type, capacity, status, 
+        driver_name, driver_phone, fuel_type, 
+        gps_device_id, last_manual_lat, last_manual_lng, last_manual_location,
+        created_ts, updated_ts
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+      ) RETURNING *
+    `, [
+      vehicle.id, vehicle.name, vehicle.license_plate, vehicle.type,
+      vehicle.capacity, vehicle.status, vehicle.driver_name, vehicle.driver_phone,
+      vehicle.fuel_type, vehicle.gps_device_id, vehicle.last_manual_lat,
+      vehicle.last_manual_lng, vehicle.last_manual_location,
+      vehicle.created_ts, vehicle.updated_ts
+    ])
+
+    // If GPS device assigned, mark it as assigned
+    if (vehicle.gps_device_id) {
+      await query(
+        'UPDATE gps_devices SET assigned = true WHERE id = $1',
+        [vehicle.gps_device_id]
+      )
+    }
+
+    return result.rows[0]
+  },
+
+  // Update vehicle
+  async update(id: string, vehicle: any) {
+    const result = await query(`
+      UPDATE vehicles SET
+        name = $1, license_plate = $2, type = $3, capacity = $4,
+        status = $5, driver_name = $6, driver_phone = $7, fuel_type = $8,
+        gps_device_id = $9, last_manual_lat = $10, last_manual_lng = $11,
+        last_manual_location = $12, updated_ts = $13
+      WHERE id = $14
+      RETURNING *
+    `, [
+      vehicle.name, vehicle.license_plate, vehicle.type, vehicle.capacity,
+      vehicle.status, vehicle.driver_name, vehicle.driver_phone, vehicle.fuel_type,
+      vehicle.gps_device_id, vehicle.last_manual_lat, vehicle.last_manual_lng,
+      vehicle.last_manual_location, Date.now(), id
+    ])
+    return result.rows[0]
+  },
+
+  // Delete vehicle
+  async delete(id: string) {
+    // First, unassign GPS device if any
+    const vehicle = await this.getById(id)
+    if (vehicle?.gps_device_id) {
+      await query(
+        'UPDATE gps_devices SET assigned = false WHERE id = $1',
+        [vehicle.gps_device_id]
+      )
+    }
+
+    const result = await query('DELETE FROM vehicles WHERE id = $1 RETURNING *', [id])
+    return result.rows[0]
+  },
+
+  // Update manual location
+  async updateManualLocation(id: string, lat: number, lng: number, location: string) {
+    const result = await query(`
+      UPDATE vehicles SET
+        last_manual_lat = $1, last_manual_lng = $2, last_manual_location = $3, updated_ts = $4
+      WHERE id = $5
+      RETURNING *
+    `, [lat, lng, location, Date.now(), id])
+    return result.rows[0]
+  }
+}
+
+// GPS Device CRUD operations
+export const gpsDb = {
+  // Get all GPS devices
+  async getAll(freeOnly = false) {
+    let query_text = 'SELECT * FROM gps_devices'
+    if (freeOnly) {
+      query_text += ' WHERE assigned = false'
+    }
+    query_text += ' ORDER BY created_ts DESC'
+    
+    const result = await query(query_text)
+    return result.rows
+  },
+
+  // Get GPS device by ID
+  async getById(id: string) {
+    const result = await query('SELECT * FROM gps_devices WHERE id = $1', [id])
+    return result.rows[0] || null
+  },
+
+  // Create new GPS device
+  async create(device: any) {
+    const result = await query(`
+      INSERT INTO gps_devices (id, label, imei, api_key, assigned, created_ts, updated_ts)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `, [
+      device.id, device.label, device.imei, device.api_key || null,
+      false, device.created_ts, device.updated_ts
+    ])
+    return result.rows[0]
+  },
+
+  // Update GPS device
+  async update(id: string, device: any) {
+    const result = await query(`
+      UPDATE gps_devices SET
+        label = $1, imei = $2, api_key = $3, updated_ts = $4
+      WHERE id = $5
+      RETURNING *
+    `, [device.label, device.imei, device.api_key, Date.now(), id])
+    return result.rows[0]
+  },
+
+  // Assign GPS device to vehicle
+  async assign(id: string, vehicleId: string) {
+    const result = await query(`
+      UPDATE gps_devices SET assigned = true, updated_ts = $1
+      WHERE id = $2
+      RETURNING *
+    `, [Date.now(), id])
+    
+    // Update vehicle with GPS device ID
+    await query(
+      'UPDATE vehicles SET gps_device_id = $1, updated_ts = $2 WHERE id = $3',
+      [id, Date.now(), vehicleId]
+    )
+    
+    return result.rows[0]
+  },
+
+  // Unassign GPS device
+  async unassign(id: string) {
+    const result = await query(`
+      UPDATE gps_devices SET assigned = false, updated_ts = $1
+      WHERE id = $2
+      RETURNING *
+    `, [Date.now(), id])
+    
+    // Remove GPS device from vehicle
+    await query(
+      'UPDATE vehicles SET gps_device_id = NULL, updated_ts = $1 WHERE gps_device_id = $2',
+      [Date.now(), id]
+    )
+    
+    return result.rows[0]
+  },
+
+  // Delete GPS device
+  async delete(id: string) {
+    // First unassign if assigned
+    await this.unassign(id)
+    
+    const result = await query('DELETE FROM gps_devices WHERE id = $1 RETURNING *', [id])
+    return result.rows[0]
+  }
+}
+
 export default pool

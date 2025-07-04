@@ -1,6 +1,6 @@
 'use client'
 
-import { mockCargoOffers, getStatusColor, getUrgencyColor, getStatusBadgeStyles, getUrgencyBadgeStyles } from '@/lib/mock-data'
+// Mock data removed - using empty array until API integration
 import { formatPrice } from '@/lib/formatters'
 import Link from 'next/link'
 import { useState, useMemo } from 'react'
@@ -8,9 +8,49 @@ import AddCargoModal from '@/components/AddCargoModal'
 import { CargoOffer, CargoType, UrgencyLevel } from '@/lib/types'
 import { useStickyNavigation } from '@/contexts/StickyNavigationContext'
 
+// Helper functions moved from mock-data
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'NEW': return '#0bda0b'
+    case 'OPEN': return '#ffaa00'  
+    case 'TAKEN': return '#0099ff'
+    case 'IN_PROGRESS': return '#ff6600'
+    case 'COMPLETED': return '#888888'
+    default: return '#adadad'
+  }
+}
+
+const getUrgencyColor = (urgency: string) => {
+  switch (urgency) {
+    case 'LOW': return '#0bda0b'
+    case 'MEDIUM': return '#ffaa00'
+    case 'HIGH': return '#ff6600'
+    case 'URGENT': return '#ff0000'
+    default: return '#adadad'
+  }
+}
+
+const getStatusBadgeStyles = (status: string) => {
+  const color = getStatusColor(status)
+  return {
+    backgroundColor: `${color}20`,
+    color: color,
+    border: `1px solid ${color}40`
+  }
+}
+
+const getUrgencyBadgeStyles = (urgency: string) => {
+  const color = getUrgencyColor(urgency)
+  return {
+    backgroundColor: `${color}20`,
+    color: color,
+    border: `1px solid ${color}40`
+  }
+}
+
 export default function MarketplacePage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [cargoOffers, setCargoOffers] = useState(mockCargoOffers)
+  const [cargoOffers, setCargoOffers] = useState<CargoOffer[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [filters, setFilters] = useState({
     country: '',

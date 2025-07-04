@@ -11,7 +11,10 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.55.1",
     "@clerk/nextjs": "^6.23.2",
+    "@googlemaps/js-api-loader": "^1.16.10",
+    "@radix-ui/react-dialog": "^1.1.14",
     "@tailwindcss/forms": "^0.5.10",
     "@tanstack/react-query": "^5.81.5",
     "next": "^14.2.3",
@@ -19,9 +22,11 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "typescript": "^5.4.5",
-    "zod": "^3.25.67"
+    "zod": "^3.25.67",
+    "zustand": "^5.0.6"
   },
   "devDependencies": {
+    "@types/google.maps": "^3.58.1",
     "@types/node": "^20.14.2",
     "@types/pg": "^8.15.4",
     "@types/react": "^18.3.3",
