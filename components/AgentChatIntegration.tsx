@@ -129,13 +129,13 @@ export default function AgentChatIntegration() {
 
   return (
     <>
-      <div className="relative mb-4">
+      <div className="relative mb-2">
         {/* Container principal cu design curbat */}
         <div 
-          className="bg-[#2d2d2d] border border-[#363636] rounded-xl relative overflow-hidden cursor-pointer hover:bg-[#333333] transition-colors group"
+          className="bg-[#2d2d2d] border border-[#363636] rounded-t-xl relative overflow-hidden cursor-pointer hover:bg-[#333333] transition-colors group"
           onClick={() => setShowFullHistory(true)}
         >
-          <div className="p-4">
+          <div className="p-3">
             {/* Header cu status */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
@@ -156,12 +156,12 @@ export default function AgentChatIntegration() {
               </div>
             </div>
 
-            {/* Preview ultimele 3 decizii */}
-            <div className="space-y-2 max-h-32 overflow-hidden">
-              {recentDecisions.slice(0, 3).map((decision, index) => (
+            {/* Preview ultimele 2 decizii */}
+            <div className="space-y-1 max-h-20 overflow-hidden">
+              {recentDecisions.slice(0, 2).map((decision, index) => (
                 <div 
                   key={decision.id}
-                  className={`flex items-center gap-3 p-2 rounded-lg bg-[#1a1a1a]/50 border ${getLevelBg(decision.type)} transition-all duration-200`}
+                  className={`flex items-center gap-2 p-1.5 rounded bg-[#1a1a1a]/50 border ${getLevelBg(decision.type)} transition-all duration-200`}
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
                   <div className={`text-xs font-bold px-1.5 py-0.5 rounded ${getLevelColor(decision.type)} bg-current/10`}>
