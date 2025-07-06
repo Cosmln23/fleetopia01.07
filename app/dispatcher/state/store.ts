@@ -57,6 +57,9 @@ interface DispatcherState {
   manualMode: boolean
   autoAssignEnabled: boolean
   
+  // Per-vehicle auto-assign state
+  vehicleAutoAssign: Record<string, boolean>
+  
   // GPS fallback state  
   gpsFallbackAllowed: boolean
   
@@ -75,7 +78,7 @@ interface DispatcherState {
   // Chat messages
   chatMessages: ChatMessage[]
   
-  // Failed requests for retry
+  // Failed requests retry queue
   retryQueue: FailedRequest[]
   
   // Current negotiation
@@ -85,6 +88,7 @@ interface DispatcherState {
   setAgentEnabled: (enabled: boolean) => void
   setManualMode: (enabled: boolean) => void
   setAutoAssignEnabled: (enabled: boolean) => void
+  setVehicleAutoAssign: (vehicleId: string, enabled: boolean) => void
   setGpsFallbackAllowed: (allowed: boolean) => void
   
   // Actions - Level settings
@@ -100,17 +104,15 @@ interface DispatcherState {
   removeExternalOffer: (offerId: string) => void
   
   // Actions - Quotes
-  addQuote: (quote: Omit<Quote, 'id' | 'createdAt' | 'updatedAt'>) => void
-  updateQuoteStatus: (quoteId: string, status: Quote['status'], data?: Partial<Quote>) => void
-  removeQuote: (quoteId: string) => void
+  addQuote: (quote: Quote) => void
+  updateQuoteStatus: (quoteId: string, status: Quote['status'], counterPrice?: number) => void
   
   // Actions - Chat
-  addChatMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => void
+  addChatMessage: (message: ChatMessage) => void
   updateMessageStatus: (messageId: string, status: ChatMessage['status']) => void
-  removeChatMessage: (messageId: string) => void
   
   // Actions - Retry queue
-  addToRetryQueue: (request: Omit<FailedRequest, 'id' | 'retryCount' | 'lastAttempt'>) => void
+  addToRetryQueue: (request: FailedRequest) => void
   removeFromRetryQueue: (requestId: string) => void
   incrementRetryCount: (requestId: string) => void
   
@@ -129,6 +131,7 @@ export const useDispatcherStore = create<DispatcherState>()(
       agentEnabled: false,
       manualMode: true,
       autoAssignEnabled: false,
+      vehicleAutoAssign: {},
       gpsFallbackAllowed: false,
       
       // Agent levels - all disabled by default
@@ -137,7 +140,7 @@ export const useDispatcherStore = create<DispatcherState>()(
         L1: false,
         L2: false,
         L3: false,
-        L4: false,
+        L4: false
       },
       
       // Default cost settings
@@ -148,7 +151,7 @@ export const useDispatcherStore = create<DispatcherState>()(
         insuranceFee: 50,
         roadFee: 30,
         marginPct: 15,
-        defaultDistance: 500,
+        defaultDistance: 500
       },
       
       // Data arrays
@@ -159,156 +162,103 @@ export const useDispatcherStore = create<DispatcherState>()(
       currentNegotiation: null,
       
       // Actions - Agent controls
-      setAgentEnabled: (enabled: boolean) => set({ agentEnabled: enabled }),
-      setManualMode: (enabled: boolean) => set({ manualMode: enabled }),
-      setAutoAssignEnabled: (enabled: boolean) => set({ autoAssignEnabled: enabled }),
-      setGpsFallbackAllowed: (allowed: boolean) => set({ gpsFallbackAllowed: allowed }),
+      setAgentEnabled: (enabled) => set({ agentEnabled: enabled }),
+      setManualMode: (enabled) => set({ manualMode: enabled }),
+      setAutoAssignEnabled: (enabled) => set({ autoAssignEnabled: enabled }),
+      setVehicleAutoAssign: (vehicleId, enabled) => set((state) => ({
+        vehicleAutoAssign: { ...state.vehicleAutoAssign, [vehicleId]: enabled }
+      })),
+      setGpsFallbackAllowed: (allowed) => set({ gpsFallbackAllowed: allowed }),
       
       // Actions - Level settings
-      updateLevelSettings: (settings: Partial<LevelSettings>) =>
-        set((state) => ({
-          levelSettings: { ...state.levelSettings, ...settings }
-        })),
-        
-      setLevel: (level: keyof LevelSettings, enabled: boolean) =>
-        set((state) => ({
-          levelSettings: { ...state.levelSettings, [level]: enabled }
-        })),
+      updateLevelSettings: (settings) => set((state) => ({
+        levelSettings: { ...state.levelSettings, ...settings }
+      })),
+      setLevel: (level, enabled) => set((state) => ({
+        levelSettings: { ...state.levelSettings, [level]: enabled }
+      })),
       
       // Actions - Cost settings
-      updateCostSettings: (settings: Partial<CostSettings>) =>
-        set((state) => ({
-          costSettings: { ...state.costSettings, ...settings }
-        })),
+      updateCostSettings: (settings) => set((state) => ({
+        costSettings: { ...state.costSettings, ...settings }
+      })),
       
       // Actions - External offers
-      setExternalOffers: (offers: CargoOffer[]) => set({ externalOffers: offers }),
-      
-      addExternalOffers: (offers: CargoOffer[]) =>
-        set((state) => ({
-          externalOffers: [...state.externalOffers, ...offers.filter(
-            newOffer => !state.externalOffers.some(existing => existing.id === newOffer.id)
-          )]
-        })),
-        
-      removeExternalOffer: (offerId: string) =>
-        set((state) => ({
-          externalOffers: state.externalOffers.filter(offer => offer.id !== offerId)
-        })),
+      setExternalOffers: (offers) => set({ externalOffers: offers }),
+      addExternalOffers: (offers) => set((state) => ({
+        externalOffers: [...state.externalOffers, ...offers].filter((offer, index, array) =>
+          array.findIndex(o => o.id === offer.id) === index
+        )
+      })),
+      removeExternalOffer: (offerId) => set((state) => ({
+        externalOffers: state.externalOffers.filter(offer => offer.id !== offerId)
+      })),
       
       // Actions - Quotes
-      addQuote: (quote: Omit<Quote, 'id' | 'createdAt' | 'updatedAt'>) => {
-        const newQuote: Quote = {
-          ...quote,
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-        set((state) => ({ quotes: [...state.quotes, newQuote] }))
-      },
-      
-      updateQuoteStatus: (quoteId: string, status: Quote['status'], data?: Partial<Quote>) =>
-        set((state) => ({
-          quotes: state.quotes.map(quote =>
-            quote.id === quoteId
-              ? { ...quote, status, ...data, updatedAt: new Date().toISOString() }
-              : quote
-          )
-        })),
-        
-      removeQuote: (quoteId: string) =>
-        set((state) => ({
-          quotes: state.quotes.filter(quote => quote.id !== quoteId)
-        })),
+      addQuote: (quote) => set((state) => ({
+        quotes: [...state.quotes, quote]
+      })),
+      updateQuoteStatus: (quoteId, status, counterPrice) => set((state) => ({
+        quotes: state.quotes.map(quote =>
+          quote.id === quoteId
+            ? { ...quote, status, counterPrice, updatedAt: new Date().toISOString() }
+            : quote
+        )
+      })),
       
       // Actions - Chat
-      addChatMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => {
-        const newMessage: ChatMessage = {
-          ...message,
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          timestamp: new Date().toISOString(),
-        }
-        set((state) => ({ chatMessages: [...state.chatMessages, newMessage] }))
-      },
-      
-      updateMessageStatus: (messageId: string, status: ChatMessage['status']) =>
-        set((state) => ({
-          chatMessages: state.chatMessages.map(message =>
-            message.id === messageId ? { ...message, status } : message
-          )
-        })),
-        
-      removeChatMessage: (messageId: string) =>
-        set((state) => ({
-          chatMessages: state.chatMessages.filter(message => message.id !== messageId)
-        })),
+      addChatMessage: (message) => set((state) => ({
+        chatMessages: [...state.chatMessages, message]
+      })),
+      updateMessageStatus: (messageId, status) => set((state) => ({
+        chatMessages: state.chatMessages.map(message =>
+          message.id === messageId ? { ...message, status } : message
+        )
+      })),
       
       // Actions - Retry queue
-      addToRetryQueue: (request: Omit<FailedRequest, 'id' | 'retryCount' | 'lastAttempt'>) => {
-        const newRequest: FailedRequest = {
-          ...request,
-          id: Date.now().toString(),
-          retryCount: 0,
-          lastAttempt: new Date().toISOString(),
-        }
-        set((state) => ({ retryQueue: [...state.retryQueue, newRequest] }))
-      },
-      
-      removeFromRetryQueue: (requestId: string) =>
-        set((state) => ({
-          retryQueue: state.retryQueue.filter(request => request.id !== requestId)
-        })),
-        
-      incrementRetryCount: (requestId: string) =>
-        set((state) => ({
-          retryQueue: state.retryQueue.map(request =>
-            request.id === requestId
-              ? { ...request, retryCount: request.retryCount + 1, lastAttempt: new Date().toISOString() }
-              : request
-          )
-        })),
+      addToRetryQueue: (request) => set((state) => ({
+        retryQueue: [...state.retryQueue, request]
+      })),
+      removeFromRetryQueue: (requestId) => set((state) => ({
+        retryQueue: state.retryQueue.filter(req => req.id !== requestId)
+      })),
+      incrementRetryCount: (requestId) => set((state) => ({
+        retryQueue: state.retryQueue.map(req =>
+          req.id === requestId
+            ? { ...req, retryCount: req.retryCount + 1, lastAttempt: new Date().toISOString() }
+            : req
+        )
+      })),
       
       // Actions - Negotiation
-      setCurrentNegotiation: (cargoId: string | null) => set({ currentNegotiation: cargoId }),
+      setCurrentNegotiation: (cargoId) => set({ currentNegotiation: cargoId }),
       
       // Actions - Agent learning
-      logFeedback: (quoteId: string, success: boolean) => {
-        // Find the quote and log feedback
+      logFeedback: (quoteId, success) => {
+        console.log(`Agent feedback: Quote ${quoteId} was ${success ? 'successful' : 'unsuccessful'}`)
+        // Could implement learning logic here
+      },
+      adjustMargin: (feedback) => {
         const state = get()
-        const quote = state.quotes.find(q => q.id === quoteId)
-        if (quote) {
-          console.log(`Feedback for quote ${quoteId}: ${success ? 'SUCCESS' : 'FAILED'}`)
-          
-          // If L3 is enabled, trigger margin adjustment
-          if (state.levelSettings.L3) {
-            get().adjustMargin(success ? 'positive' : 'negative')
-          }
-        }
-      },
-      
-      adjustMargin: (feedback: 'positive' | 'negative') => {
-        set((state) => {
-          const adjustment = feedback === 'positive' ? -2 : 3 // Reduce margin on success, increase on failure
-          const newMargin = Math.max(5, Math.min(50, state.costSettings.marginPct + adjustment))
-          
-          console.log(`Adjusting margin from ${state.costSettings.marginPct}% to ${newMargin}% (${feedback})`)
-          
-          return {
-            costSettings: {
-              ...state.costSettings,
-              marginPct: newMargin
-            }
-          }
-        })
-      },
+        const adjustment = feedback === 'positive' ? -0.5 : 0.5
+        const newMargin = Math.max(5, Math.min(30, state.costSettings.marginPct + adjustment))
+        
+        set((state) => ({
+          costSettings: { ...state.costSettings, marginPct: newMargin }
+        }))
+        
+        console.log(`Agent margin adjusted: ${feedback} feedback, new margin: ${newMargin}%`)
+      }
     }),
     {
-      name: 'dispatcher-store',
+      name: 'dispatcher-storage',
       // Only persist settings, not transient data
       partialize: (state) => ({
         agentEnabled: state.agentEnabled,
         manualMode: state.manualMode,
         autoAssignEnabled: state.autoAssignEnabled,
+        vehicleAutoAssign: state.vehicleAutoAssign,
         gpsFallbackAllowed: state.gpsFallbackAllowed,
         levelSettings: state.levelSettings,
         costSettings: state.costSettings,

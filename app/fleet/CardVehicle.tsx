@@ -20,9 +20,10 @@ interface CardVehicleProps {
   vehicle: Vehicle
   onLocationUpdate?: () => void
   onVehicleDeleted?: () => void
+  onCardClick?: (lat: number, lng: number) => void
 }
 
-export default function CardVehicle({ vehicle, onLocationUpdate, onVehicleDeleted }: CardVehicleProps) {
+export default function CardVehicle({ vehicle, onLocationUpdate, onVehicleDeleted, onCardClick }: CardVehicleProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
