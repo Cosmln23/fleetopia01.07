@@ -4,12 +4,10 @@ import { useState } from 'react'
 import AgentDroplet from './AgentDroplet'
 
 export default function FullNavigationBar() {
-  const [showAgentDroplet, setShowAgentDroplet] = useState(false)
-
   return (
     <div className="relative">
-      {/* Bara de meniu rămâne complet neschimbată */}
-      <div className="flex border-b border-[#4d4d4d] px-4 gap-8 justify-center">
+      {/* Bara de meniu cu formă specială pentru picătură */}
+      <div className="flex border-b border-[#4d4d4d] px-4 gap-8 justify-center relative">
         <a className="flex flex-col items-center justify-center border-b-[3px] border-b-black text-white gap-1 pb-[7px] pt-2.5" href="/">
           <div className="text-white" data-icon="House" data-size="24px" data-weight="fill">
             <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
@@ -26,25 +24,25 @@ export default function FullNavigationBar() {
           </div>
           <p className="text-[#adadad] text-sm font-bold leading-normal tracking-[0.015em]">Marketplace</p>
         </a>
-        <a 
-          className="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-[#adadad] gap-1 pb-[7px] pt-2.5 relative" 
-          href="/dispatcher"
-          onMouseEnter={() => setShowAgentDroplet(true)}
-          onMouseLeave={() => setShowAgentDroplet(false)}
-        >
-          <div className="text-[#adadad]" data-icon="Robot" data-size="24px" data-weight="regular">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
-              <path d="M200,48H136V16a8,8,0,0,0-16,0V48H56A32,32,0,0,0,24,80V192a32,32,0,0,0,32,32H200a32,32,0,0,0,32-32V80A32,32,0,0,0,200,48Zm16,144a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V80A16,16,0,0,1,56,64H200a16,16,0,0,1,16,16Zm-52-56H92a28,28,0,0,0,0,56h72a28,28,0,0,0,0-56Zm-28,16v24H120V152ZM80,164a12,12,0,0,1,12-12h12v24H92A12,12,0,0,1,80,164Zm84,12H152V152h12a12,12,0,0,1,0,24ZM72,108a12,12,0,1,1,12,12A12,12,0,0,1,72,108Zm88,0a12,12,0,1,1,12,12A12,12,0,0,1,160,108Z" />
-            </svg>
-          </div>
-          <p className="text-[#adadad] text-sm font-bold leading-normal tracking-[0.015em]">DispatcherAI</p>
+        
+        {/* Zona DispatcherAI cu picătura integrată */}
+        <div className="relative flex flex-col items-center justify-center">
+          {/* Agent Droplet - picătura organică FIXĂ */}
+          <AgentDroplet />
           
-          {/* Agent Droplet - picătura organică cu iconiță */}
-          <AgentDroplet 
-            isVisible={showAgentDroplet}
-            onToggle={() => setShowAgentDroplet(!showAgentDroplet)}
-          />
-        </a>
+          {/* Link către dispatcher - poziționat în bara normală */}
+          <a 
+            className="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-[#adadad] gap-1 pb-[7px] pt-2.5" 
+            href="/dispatcher"
+          >
+            <div className="text-[#adadad]" data-icon="Robot" data-size="24px" data-weight="regular">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                <path d="M200,48H136V16a8,8,0,0,0-16,0V48H56A32,32,0,0,0,24,80V192a32,32,0,0,0,32,32H200a32,32,0,0,0,32-32V80A32,32,0,0,0,200,48Zm16,144a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V80A16,16,0,0,1,56,64H200a16,16,0,0,1,16,16Zm-52-56H92a28,28,0,0,0,0,56h72a28,28,0,0,0,0-56Zm-28,16v24H120V152ZM80,164a12,12,0,0,1,12-12h12v24H92A12,12,0,0,1,80,164Zm84,12H152V152h12a12,12,0,0,1,0,24ZM72,108a12,12,0,1,1,12,12A12,12,0,0,1,72,108Zm88,0a12,12,0,1,1,12,12A12,12,0,0,1,160,108Z" />
+              </svg>
+            </div>
+            <p className="text-[#adadad] text-sm font-bold leading-normal tracking-[0.015em]">DispatcherAI</p>
+          </a>
+        </div>
         <a className="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-[#adadad] gap-1 pb-[7px] pt-2.5" href="/fleet">
           <div className="text-[#adadad]" data-icon="Truck" data-size="24px" data-weight="regular">
             <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">

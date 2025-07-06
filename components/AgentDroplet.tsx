@@ -13,12 +13,7 @@ interface AgentDecision {
   confidence?: number
 }
 
-interface AgentDropletProps {
-  isVisible: boolean
-  onToggle: () => void
-}
-
-export default function AgentDroplet({ isVisible, onToggle }: AgentDropletProps) {
+export default function AgentDroplet() {
   const [agentPopupOpen, setAgentPopupOpen] = useState(false)
   const { agentEnabled } = useDispatcherStore()
 
@@ -99,17 +94,16 @@ export default function AgentDroplet({ isVisible, onToggle }: AgentDropletProps)
     }
   }, [agentPopupOpen])
 
-  if (!isVisible) {
-    return null
-  }
-
+  // Picătura e FIXĂ - întotdeauna vizibilă
   return (
     <>
-      {/* 1. Contur picătură cu iconiță - răsturnată, DEASUPRA barei de meniu, mai lată la bază */}
+      {/* 1. Semicercul de sus cu contur vizibil */}
       <div 
-        className="absolute -top-12 left-1/2 transform -translate-x-1/2 w-16 h-12 bg-[#1a1a1a] shadow-lg flex items-center justify-center pointer-events-auto z-20 border border-[#4d4d4d] hover:bg-[#2a2a2a] transition-colors cursor-pointer"
+        className="absolute -top-6 left-1/2 transform -translate-x-1/2 w-12 h-6 bg-[#1a1a1a] shadow-lg flex items-center justify-center pointer-events-auto z-20 hover:bg-[#2a2a2a] transition-colors cursor-pointer overflow-hidden"
         style={{
-          clipPath: 'polygon(40% 0%, 60% 0%, 90% 100%, 10% 100%)'
+          borderRadius: '24px 24px 0 0',
+          border: '1px solid #4d4d4d',
+          borderBottom: 'none'
         }}
         id="agent-button-container"
         onClick={(e) => { 
