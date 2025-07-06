@@ -91,19 +91,19 @@ export default function AgentChatIntegration() {
     return (
       <div className="relative mb-4">
         {/* Container cu design curbat */}
-        <div className="bg-gray-800 border border-gray-600 rounded-xl relative overflow-hidden">
+        <div className="bg-[#2d2d2d] border border-[#363636] rounded-xl relative overflow-hidden">
           <div className="p-4">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center">
-                <div className="text-gray-400 text-sm">🤖</div>
+              <div className="w-8 h-8 rounded-full bg-[#363636] flex items-center justify-center">
+                <div className="text-[#adadad] text-sm">🤖</div>
               </div>
               <div>
-                <h3 className="text-gray-400 font-medium text-sm">Agent Decisions</h3>
-                <p className="text-gray-500 text-xs">Agent is currently disabled</p>
+                <h3 className="text-[#adadad] font-medium text-sm">Agent Decisions</h3>
+                <p className="text-[#666] text-xs">Agent is currently disabled</p>
               </div>
             </div>
             
-            <div className="text-center py-6 text-gray-500">
+            <div className="text-center py-6 text-[#666]">
               <div className="text-2xl mb-2">😴</div>
               <p className="text-sm">Enable agent to see decisions here</p>
             </div>
@@ -114,7 +114,7 @@ export default function AgentChatIntegration() {
         <div className="relative -mt-1">
           <svg
             viewBox="0 0 400 40"
-            className="w-full h-10 text-gray-800"
+            className="w-full h-10 text-[#2d2d2d]"
             preserveAspectRatio="none"
           >
             <path
@@ -132,23 +132,23 @@ export default function AgentChatIntegration() {
       <div className="relative mb-4">
         {/* Container principal cu design curbat */}
         <div 
-          className="bg-gray-800 border border-gray-600 rounded-xl relative overflow-hidden cursor-pointer hover:bg-gray-700 transition-colors group"
+          className="bg-[#2d2d2d] border border-[#363636] rounded-xl relative overflow-hidden cursor-pointer hover:bg-[#333333] transition-colors group"
           onClick={() => setShowFullHistory(true)}
         >
           <div className="p-4">
             {/* Header cu status */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-green-900 border border-green-600 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center">
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                 </div>
                 <div>
                   <h3 className="text-white font-medium text-sm">Agent Decisions</h3>
-                  <p className="text-gray-400 text-xs">{recentDecisions.length} recent actions</p>
+                  <p className="text-[#adadad] text-xs">{recentDecisions.length} recent actions</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-2 text-gray-500 group-hover:text-gray-400 transition-colors">
+              <div className="flex items-center gap-2 text-[#666] group-hover:text-[#adadad] transition-colors">
                 <span className="text-xs">View All</span>
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 256 256">
                   <path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"></path>
@@ -161,7 +161,7 @@ export default function AgentChatIntegration() {
               {recentDecisions.slice(0, 3).map((decision, index) => (
                 <div 
                   key={decision.id}
-                  className={`flex items-center gap-3 p-2 rounded-lg bg-gray-900 border ${getLevelBg(decision.type)} transition-all duration-200`}
+                  className={`flex items-center gap-3 p-2 rounded-lg bg-[#1a1a1a]/50 border ${getLevelBg(decision.type)} transition-all duration-200`}
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
                   <div className={`text-xs font-bold px-1.5 py-0.5 rounded ${getLevelColor(decision.type)} bg-current/10`}>
