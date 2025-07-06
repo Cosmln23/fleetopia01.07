@@ -2,11 +2,12 @@
 
 // Mock data removed - using empty array until API integration
 import { formatPrice } from '@/lib/formatters'
-import Link from 'next/link'
 import { useState, useMemo } from 'react'
 import AddCargoModal from '@/components/AddCargoModal'
+import CargoDetailsModal from '@/components/CargoDetailsModal'
 import { CargoOffer, CargoType, UrgencyLevel } from '@/lib/types'
 import { useStickyNavigation } from '@/contexts/StickyNavigationContext'
+import { getCargoDistance, formatDistance } from '@/lib/distanceCalculator'
 
 // Helper functions moved from mock-data
 const getStatusColor = (status: string) => {
@@ -50,6 +51,8 @@ const getUrgencyBadgeStyles = (urgency: string) => {
 
 export default function MarketplacePage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isCargoDetailsOpen, setIsCargoDetailsOpen] = useState(false)
+  const [selectedCargo, setSelectedCargo] = useState<CargoOffer | null>(null)
   const [cargoOffers, setCargoOffers] = useState<CargoOffer[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [filters, setFilters] = useState({
@@ -70,6 +73,26 @@ export default function MarketplacePage() {
       updatedAt: new Date().toISOString()
     }
     setCargoOffers(prev => [newCargo, ...prev])
+  }
+
+  const handleCargoClick = (cargo: CargoOffer) => {
+    setSelectedCargo(cargo)
+    setIsCargoDetailsOpen(true)
+    setModalOpen(true)
+  }
+
+  const handleCloseCargoDetails = () => {
+    setIsCargoDetailsOpen(false)
+    setSelectedCargo(null)
+    setModalOpen(false)
+  }
+
+  const handleSendQuote = async (cargoId: string, price: number) => {
+    console.log('Sending quote:', { cargoId, price })
+  }
+
+  const handleIgnoreCargo = async (cargoId: string) => {
+    console.log('Ignoring cargo:', cargoId)
   }
 
   // Filter and search logic
@@ -293,39 +316,51 @@ export default function MarketplacePage() {
           <span className="text-yellow-400"> (filtered)</span>
         )}
       </p>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3 p-4">
-        {filteredOffers.map((offer) => (
-          <Link key={offer.id} href={`/marketplace/${offer.id}`} className="flex flex-col gap-3 pb-3 bg-[#2d2d2d] rounded-xl p-4 cursor-pointer hover:bg-[#333333] transition-colors">
-            <div className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl bg-[#363636] flex items-center justify-center">
-              <div className="text-[#adadad] text-4xl">📦</div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-start">
-                <p className="text-white text-base font-medium leading-normal">{offer.title}</p>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-3 p-4">
+        {filteredOffers.map((offer) => {
+          const distance = getCargoDistance(offer)
+          return (
+            <div 
+              key={offer.id} 
+              className="flex flex-col bg-[#2d2d2d] rounded-xl border border-[#363636] p-3 cursor-pointer hover:bg-[#333333] transition-colors hover:shadow-lg"
+              onClick={() => handleCargoClick(offer)}
+            >
+              {/* Compact header with icon and status */}
+              <div className="flex justify-between items-start mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="text-[#adadad] text-xl">📦</div>
+                  <div>
+                    <p className="text-white text-sm font-medium leading-normal">{offer.title}</p>
+                    <p className="text-[#adadad] text-xs">
+                      {offer.fromAddress.split(',')[0]} → {offer.toAddress.split(',')[0]}
+                    </p>
+                  </div>
+                </div>
                 <span className={`text-xs px-2 py-1 rounded-full ${getStatusBadgeStyles(offer.status)}`}>
                   {offer.status}
                 </span>
               </div>
-              <p className="text-[#adadad] text-sm font-normal leading-normal">
-                {offer.fromAddress.split(',')[0]} → {offer.toAddress.split(',')[0]}
-              </p>
-              <div className="grid grid-cols-2 gap-2 text-xs text-[#adadad]">
+
+              {/* Distance display */}
+              <p className="text-[#adadad] text-xs mb-2">{formatDistance(distance)}</p>
+
+              {/* Compact info grid */}
+              <div className="grid grid-cols-3 gap-2 text-xs text-[#adadad] mb-2">
                 <div>
-                  <span className="text-white font-medium">Weight:</span> {offer.weight}kg
+                  <span className="text-white font-medium">{offer.weight}kg</span>
                 </div>
                 <div>
-                  <span className="text-white font-medium">Type:</span> {offer.cargoType}
+                  <span className="text-white font-medium">{offer.cargoType}</span>
                 </div>
                 <div>
-                  <span className="text-white font-medium">Loading:</span> {offer.loadingDate}
-                </div>
-                <div>
-                  <span className="text-white font-medium">Delivery:</span> {offer.deliveryDate}
+                  <span className="text-white font-medium">{offer.loadingDate}</span>
                 </div>
               </div>
-              <div className="flex justify-between items-center pt-2">
+
+              {/* Price and urgency footer */}
+              <div className="flex justify-between items-center pt-2 border-t border-[#363636]">
                 <div>
-                  <p className="text-white text-lg font-bold">€{formatPrice(offer.price)}</p>
+                  <p className="text-white text-base font-bold">€{formatPrice(offer.price)}</p>
                   <p className="text-[#adadad] text-xs">€{offer.pricePerKg}/kg</p>
                 </div>
                 <div className="text-right">
@@ -336,8 +371,8 @@ export default function MarketplacePage() {
                 </div>
               </div>
             </div>
-          </Link>
-        ))}
+          )
+        })}
       </div>
       <div className="flex items-center justify-center p-4">
         <a href="#" className="flex size-10 items-center justify-center">
@@ -369,6 +404,15 @@ export default function MarketplacePage() {
           setModalOpen(false)
         }}
         onSubmit={handleAddCargo}
+      />
+
+      {/* Cargo Details Modal */}
+      <CargoDetailsModal
+        isOpen={isCargoDetailsOpen}
+        onClose={handleCloseCargoDetails}
+        cargo={selectedCargo}
+        onSendQuote={handleSendQuote}
+        onIgnore={handleIgnoreCargo}
       />
     </>
   )

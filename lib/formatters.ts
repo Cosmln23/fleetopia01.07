@@ -2,16 +2,19 @@
 
 export function formatPrice(price: number): string {
   // Use consistent formatting to avoid hydration errors
-  // Always use dot as thousands separator to match server rendering
-  return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  // Properly handle decimal places and thousands separators
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(parseFloat(price.toFixed(2)))
 }
 
 export function formatWeight(weight: number): string {
-  return weight.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return new Intl.NumberFormat('en-US').format(parseFloat(weight.toFixed(0)))
 }
 
 export function formatNumber(num: number): string {
-  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return new Intl.NumberFormat('en-US').format(parseFloat(num.toFixed(2)))
 }
 
 // Alternative function for production with locale support

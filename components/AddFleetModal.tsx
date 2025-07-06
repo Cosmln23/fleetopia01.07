@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import NoGpsLocationModal from '@/app/dispatcher/components/NoGpsLocationModal'
 
 interface VehicleData {
   name: string
@@ -39,7 +40,7 @@ export default function AddFleetModal({ isOpen, onClose, onSubmit }: AddFleetMod
     capacity: '',
     consumption: '',
     location: '',
-    coordinates: '',
+    coordinates: { lat: 0, lng: 0 },
     driver: '',
     status: 'Active' as const,
     gpsDeviceId: ''
@@ -47,6 +48,7 @@ export default function AddFleetModal({ isOpen, onClose, onSubmit }: AddFleetMod
 
   const [gpsDevices, setGpsDevices] = useState<GpsDevice[]>([])
   const [loadingGps, setLoadingGps] = useState(false)
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false)
 
   // Fetch available GPS devices when modal opens
   useEffect(() => {
@@ -76,11 +78,8 @@ export default function AddFleetModal({ isOpen, onClose, onSubmit }: AddFleetMod
     e.preventDefault()
     
     let coordinates = undefined
-    if (formData.coordinates) {
-      const [lat, lng] = formData.coordinates.split(',').map(coord => parseFloat(coord.trim()))
-      if (!isNaN(lat) && !isNaN(lng)) {
-        coordinates = { lat, lng }
-      }
+    if (formData.coordinates && formData.coordinates.lat !== 0 && formData.coordinates.lng !== 0) {
+      coordinates = formData.coordinates
     }
 
     const vehicleData: VehicleData = {
@@ -107,15 +106,25 @@ export default function AddFleetModal({ isOpen, onClose, onSubmit }: AddFleetMod
       capacity: '',
       consumption: '',
       location: '',
-      coordinates: '',
+      coordinates: { lat: 0, lng: 0 },
       driver: '',
       status: 'Active',
       gpsDeviceId: ''
     })
+    setIsLocationModalOpen(false)
   }
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleLocationSet = (location: string, lat: number, lng: number) => {
+    setFormData(prev => ({
+      ...prev,
+      location,
+      coordinates: { lat, lng }
+    }))
+    setIsLocationModalOpen(false)
   }
 
   return (
@@ -210,35 +219,34 @@ export default function AddFleetModal({ isOpen, onClose, onSubmit }: AddFleetMod
               />
             </div>
 
-            {/* Location */}
-            <div>
-              <label className="block text-white text-sm font-medium mb-2">Current Location</label>
-              <input
-                type="text"
-                required
-                value={formData.location}
-                onChange={(e) => handleInputChange('location', e.target.value)}
-                placeholder="e.g. Bucharest, Romania"
-                className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
-              />
-            </div>
-
-            {/* GPS Coordinates */}
-            <div>
-              <label className="block text-white text-sm font-medium mb-2">GPS Coordinates (optional)</label>
-              <input
-                type="text"
-                value={formData.coordinates}
-                onChange={(e) => handleInputChange('coordinates', e.target.value)}
-                placeholder="e.g. 44.4268, 26.1025"
-                className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
-              />
-              <p className="text-[#adadad] text-xs mt-1">Enter as: latitude, longitude</p>
-            </div>
-
             {/* GPS Device */}
             <div>
-              <label className="block text-white text-sm font-medium mb-2">GPS Device (optional)</label>
+              <div className="flex items-center gap-2 mb-2">
+                <label className="block text-white text-sm font-medium">GPS Device</label>
+                <button
+                  type="button"
+                  className="text-[#adadad] hover:text-white transition-colors group relative"
+                  onMouseEnter={(e) => {
+                    const tooltip = e.currentTarget.querySelector('.tooltip')
+                    if (tooltip) tooltip.classList.remove('opacity-0', 'pointer-events-none')
+                  }}
+                  onMouseLeave={(e) => {
+                    const tooltip = e.currentTarget.querySelector('.tooltip')
+                    if (tooltip) tooltip.classList.add('opacity-0', 'pointer-events-none')
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256">
+                    <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm12-88a12,12,0,1,1-12-12A12,12,0,0,1,140,128Zm-12-44a12,12,0,1,0,12,12A12,12,0,0,0,128,84Z"></path>
+                  </svg>
+                  <div className="tooltip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-[#2d2d2d] border border-[#4d4d4d] rounded-lg text-xs text-white shadow-lg opacity-0 pointer-events-none transition-opacity z-10">
+                    <div className="font-medium mb-1">GPS Device Info</div>
+                    <div className="text-[#adadad]">
+                      GPS devices provide automatic real-time location tracking. Configure and manage your devices in Settings → GPS Devices.
+                    </div>
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#2d2d2d]"></div>
+                  </div>
+                </button>
+              </div>
               <select
                 value={formData.gpsDeviceId}
                 onChange={(e) => handleInputChange('gpsDeviceId', e.target.value)}
@@ -257,11 +265,40 @@ export default function AddFleetModal({ isOpen, onClose, onSubmit }: AddFleetMod
                 )}
               </select>
               {gpsDevices.length === 0 && !loadingGps && (
-                <p className="text-[#adadad] text-xs mt-1">
-                  No free GPS devices available. Add one in Settings → GPS Devices
+                <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 256 256">
+                    <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm-4,48a4,4,0,0,1,8,0v56a4,4,0,0,1-8,0Zm4,104a12,12,0,1,1,12-12A12,12,0,0,1,128,176Z"></path>
+                  </svg>
+                  No GPS devices available. Add one in Settings → GPS Devices
                 </p>
               )}
             </div>
+
+            {/* Vehicle Location - Only show if no GPS device selected */}
+            {!formData.gpsDeviceId && (
+              <div>
+                <label className="block text-white text-sm font-medium mb-2">Vehicle Location</label>
+                <button
+                  type="button"
+                  onClick={() => setIsLocationModalOpen(true)}
+                  className="w-full bg-[#363636] hover:bg-[#4d4d4d] text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 border border-[#4d4d4d] focus:outline-none focus:border-white"
+                >
+                  <div className="text-white" data-icon="MapPin" data-size="16px" data-weight="regular">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" fill="currentColor" viewBox="0 0 256 256">
+                      <path d="M128,64a40,40,0,1,0,40,40A40,40,0,0,0,128,64Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,128ZM128,16a88.1,88.1,0,0,0-88,88c0,31.4,14.51,64.68,42,96.25a254.19,254.19,0,0,0,41.45,38.3,8,8,0,0,0,9.18,0A254.19,254.19,0,0,0,174,200.25c27.45-31.57,42-64.85,42-96.25A88.1,88.1,0,0,0,128,16Zm0,206c-16.53-13-72-60.75-72-118a72,72,0,0,1,144,0C200,161.23,144.53,209,128,222Z"></path>
+                    </svg>
+                  </div>
+                  <span>
+                    {formData.location ? `📍 ${formData.location}` : 'Set Manual Location'}
+                  </span>
+                </button>
+                {formData.coordinates && formData.coordinates.lat !== 0 && formData.coordinates.lng !== 0 && (
+                  <p className="text-[#adadad] text-xs mt-1">
+                    📍 {formData.coordinates.lat.toFixed(6)}, {formData.coordinates.lng.toFixed(6)}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               {/* Driver */}
@@ -314,6 +351,14 @@ export default function AddFleetModal({ isOpen, onClose, onSubmit }: AddFleetMod
           </div>
         </div>
       </div>
+
+      {/* NoGpsLocationModal */}
+      <NoGpsLocationModal
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+        onLocationSet={handleLocationSet}
+        vehicleName={formData.name || 'New Vehicle'}
+      />
     </div>
   )
 }
