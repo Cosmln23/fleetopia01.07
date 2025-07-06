@@ -97,11 +97,11 @@ export default function AgentDroplet() {
   // Picătura e FIXĂ - întotdeauna vizibilă
   return (
     <>
-      {/* 1. Semicercul de sus cu contur vizibil */}
+      {/* 1. Semicercul de sus mai mare cu contur vizibil */}
       <div 
-        className="absolute -top-6 left-1/2 transform -translate-x-1/2 w-12 h-6 bg-[#1a1a1a] shadow-lg flex items-center justify-center pointer-events-auto z-20 hover:bg-[#2a2a2a] transition-colors cursor-pointer overflow-hidden"
+        className="absolute -top-10 left-1/2 transform -translate-x-1/2 w-20 h-10 bg-[#1a1a1a] shadow-lg flex items-center justify-center pointer-events-auto z-20 hover:bg-[#2a2a2a] transition-colors cursor-pointer overflow-hidden"
         style={{
-          borderRadius: '24px 24px 0 0',
+          borderRadius: '40px 40px 0 0',
           border: '1px solid #4d4d4d',
           borderBottom: 'none'
         }}
@@ -112,11 +112,9 @@ export default function AgentDroplet() {
           setAgentPopupOpen(o => !o) 
         }}
       >
-        {/* 2. Iconiță Agent - același stil ca celelalte iconițe din bara de meniu */}
-        <div className={`${agentEnabled ? 'text-green-400' : 'text-[#adadad]'}`} data-icon="Robot" data-size="24px" data-weight="regular">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
-            <path d="M200,48H136V16a8,8,0,0,0-16,0V48H56A32,32,0,0,0,24,80V192a32,32,0,0,0,32,32H200a32,32,0,0,0,32-32V80A32,32,0,0,0,200,48Zm16,144a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V80A16,16,0,0,1,56,64H200a16,16,0,0,1,16,16Zm-52-56H92a28,28,0,0,0,0,56h72a28,28,0,0,0,0-56Zm-28,16v24H120V152ZM80,164a12,12,0,0,1,12-12h12v24H92A12,12,0,0,1,80,164Zm84,12H152V152h12a12,12,0,0,1,0,24ZM72,108a12,12,0,1,1,12,12A12,12,0,0,1,72,108Zm88,0a12,12,0,1,1,12,12A12,12,0,0,1,160,108Z" />
-          </svg>
+        {/* 2. Litera F în loc de iconița Robot */}
+        <div className={`${agentEnabled ? 'text-green-400' : 'text-[#adadad]'} text-lg font-bold`}>
+          F
         </div>
         
         {/* Badge cu numărul de decizii */}
