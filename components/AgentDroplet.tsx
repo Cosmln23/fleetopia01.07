@@ -13,8 +13,12 @@ interface AgentDecision {
   confidence?: number
 }
 
-export default function AgentDroplet() {
-  const [agentPopupOpen, setAgentPopupOpen] = useState(false)
+interface AgentDropletProps {
+  agentPopupOpen: boolean
+  setAgentPopupOpen: (open: boolean) => void
+}
+
+export default function AgentDroplet({ agentPopupOpen, setAgentPopupOpen }: AgentDropletProps) {
   const { agentEnabled } = useDispatcherStore()
 
   // Mock recent agent decisions
@@ -100,7 +104,7 @@ export default function AgentDroplet() {
       {/* Semicercul F - vizibil DOAR când popup-ul e închis */}
       {!agentPopupOpen && (
         <div 
-          className="absolute -top-10 left-1/2 transform -translate-x-1/2 w-20 h-10 bg-[#1a1a1a] shadow-lg flex items-center justify-center pointer-events-auto z-20 hover:bg-[#2a2a2a] transition-colors cursor-pointer overflow-hidden"
+          className="absolute -top-10 left-1/2 transform -translate-x-1/2 w-20 h-10 bg-[#1a1a1a] shadow-lg flex items-center justify-center pointer-events-auto z-30 hover:bg-[#2a2a2a] transition-colors cursor-pointer overflow-hidden"
           style={{
             borderRadius: '40px 40px 0 0',
             border: '1px solid #4d4d4d',
@@ -118,9 +122,9 @@ export default function AgentDroplet() {
             F
           </div>
           
-          {/* Badge cu numărul de decizii */}
+          {/* Badge cu numărul de decizii - mai mic și mai discret */}
           {agentEnabled && recentDecisions.length > 0 && (
-            <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+            <div className="absolute -top-0.5 -right-0.5 bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold text-xs">
               {recentDecisions.length}
             </div>
           )}
@@ -131,8 +135,10 @@ export default function AgentDroplet() {
       {agentPopupOpen && (
         <div 
           id="agent-popup"
-          className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-full w-64 h-64 bg-[#1a1a1a] shadow-xl border border-[#4d4d4d] z-20"
+          className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-full bg-[#1a1a1a] shadow-xl border border-[#4d4d4d] z-20"
           style={{
+            width: '512px',
+            height: '512px',
             borderRadius: '12px 12px 0 0',
             borderBottom: 'none'
           }}
@@ -140,25 +146,15 @@ export default function AgentDroplet() {
         >
           <div className="p-4">
             {/* Header */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center">
-                  {agentEnabled ? (
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  ) : (
-                    <div className="w-2 h-2 bg-[#666] rounded-full"></div>
-                  )}
-                </div>
-                <h4 className="text-white font-bold text-sm">Agent AI</h4>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-6 h-6 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center">
+                {agentEnabled ? (
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                ) : (
+                  <div className="w-2 h-2 bg-[#666] rounded-full"></div>
+                )}
               </div>
-              <button 
-                onClick={() => setAgentPopupOpen(false)}
-                className="text-[#666] hover:text-[#adadad] transition-colors"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256">
-                  <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path>
-                </svg>
-              </button>
+              <h4 className="text-white font-bold text-sm">Agent AI</h4>
             </div>
 
             {/* Status și decizii recente */}

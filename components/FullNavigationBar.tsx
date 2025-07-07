@@ -4,6 +4,15 @@ import { useState } from 'react'
 import AgentDroplet from './AgentDroplet'
 
 export default function FullNavigationBar() {
+  const [agentPopupOpen, setAgentPopupOpen] = useState(false)
+  
+  const handleDispatcherClick = (e: React.MouseEvent) => {
+    if (agentPopupOpen) {
+      e.preventDefault()
+      setAgentPopupOpen(false)
+    }
+  }
+  
   return (
     <div className="relative">
       {/* Bara de meniu cu formă specială pentru picătură */}
@@ -28,12 +37,13 @@ export default function FullNavigationBar() {
         {/* Zona DispatcherAI cu picătura integrată */}
         <div className="relative flex flex-col items-center justify-center">
           {/* Agent Droplet - picătura organică FIXĂ */}
-          <AgentDroplet />
+          <AgentDroplet agentPopupOpen={agentPopupOpen} setAgentPopupOpen={setAgentPopupOpen} />
           
           {/* Link către dispatcher - poziționat în bara normală */}
           <a 
             className="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-[#adadad] gap-1 pb-[7px] pt-2.5" 
             href="/dispatcher"
+            onClick={handleDispatcherClick}
           >
             <div className="text-[#adadad]" data-icon="Robot" data-size="24px" data-weight="regular">
               <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
