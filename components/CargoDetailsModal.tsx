@@ -29,6 +29,7 @@ export default function CargoDetailsModal({
   const [showCostBreakdown, setShowCostBreakdown] = useState(false)
   const [customPrice, setCustomPrice] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [negotiationStatus, setNegotiationStatus] = useState<'initial' | 'quote_sent' | 'negotiating' | 'accepted' | 'rejected'>('initial')
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -52,11 +53,61 @@ export default function CargoDetailsModal({
     try {
       const price = customPrice ? parseFloat(customPrice) : suggestedPrice
       await onSendQuote(cargo.id, price)
-      onClose()
+      setNegotiationStatus('quote_sent')
+      setShowChat(true) // Auto-open chat after quote sent
+      setCustomPrice('') // Clear input
     } catch (error) {
       console.error('Failed to send quote:', error)
     } finally {
       setIsSubmitting(false)
+    }
+  }
+  
+  const handleQuoteSentFromChat = (price: number) => {
+    setNegotiationStatus('negotiating')
+    // Could trigger additional actions here
+  }
+  
+  const getNegotiationStatusDisplay = () => {
+    switch (negotiationStatus) {
+      case 'quote_sent':
+        return (
+          <div className="bg-blue-600/20 border border-blue-600/30 rounded-lg p-3 mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+              <span className="text-blue-400 font-medium">Quote sent - waiting for response</span>
+            </div>
+          </div>
+        )
+      case 'negotiating':
+        return (
+          <div className="bg-yellow-600/20 border border-yellow-600/30 rounded-lg p-3 mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+              <span className="text-yellow-400 font-medium">Negotiating price...</span>
+            </div>
+          </div>
+        )
+      case 'accepted':
+        return (
+          <div className="bg-green-600/20 border border-green-600/30 rounded-lg p-3 mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+              <span className="text-green-400 font-medium">Quote accepted! 🎉</span>
+            </div>
+          </div>
+        )
+      case 'rejected':
+        return (
+          <div className="bg-red-600/20 border border-red-600/30 rounded-lg p-3 mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+              <span className="text-red-400 font-medium">Quote rejected</span>
+            </div>
+          </div>
+        )
+      default:
+        return null
     }
   }
 
@@ -113,6 +164,8 @@ export default function CargoDetailsModal({
 
         {/* Content */}
         <div className="p-6 space-y-6">
+          {/* Negotiation Status */}
+          {getNegotiationStatusDisplay()}
           {/* Main Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-[#2d2d2d] rounded-lg p-4">
@@ -271,7 +324,11 @@ export default function CargoDetailsModal({
           {/* Chat Panel - Collapsible */}
           {showChat && (
             <div className="border-t border-[#363636] pt-6">
-              <ChatPanel cargoId={cargo.id} />
+              <ChatPanel 
+                cargoId={cargo.id} 
+                onQuoteSent={handleQuoteSentFromChat}
+                suggestedPrice={suggestedPrice}
+              />
             </div>
           )}
         </div>

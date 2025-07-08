@@ -8,13 +8,17 @@
     "build": "next build",
     "start": "next start -p 3000",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test:production": "node scripts/test-production.js",
+    "deploy:check": "node scripts/deploy-check.js",
+    "deploy:ready": "npm run deploy:check && npm run test:production"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.55.1",
     "@clerk/nextjs": "^6.23.2",
     "@googlemaps/js-api-loader": "^1.16.10",
     "@radix-ui/react-dialog": "^1.1.14",
+    "@sentry/nextjs": "^9.35.0",
     "@tailwindcss/forms": "^0.5.10",
     "@tanstack/react-query": "^5.81.5",
     "@types/lodash.debounce": "^4.0.9",
@@ -23,7 +27,10 @@
     "pg": "^8.16.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "typescript": "^5.4.5",
+    "winston": "^3.17.0",
     "zod": "^3.25.67",
     "zustand": "^5.0.6"
   },
