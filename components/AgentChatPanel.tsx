@@ -21,19 +21,7 @@ export default function AgentChatPanel({ agentEnabled }: AgentChatPanelProps) {
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Initialize with welcome message
-  useEffect(() => {
-    if (agentEnabled && messages.length === 0) {
-      setMessages([
-        {
-          id: '1',
-          sender: 'agent',
-          content: 'Hi! I\'m monitoring cargo offers. How can I help?',
-          timestamp: new Date().toISOString()
-        }
-      ])
-    }
-  }, [agentEnabled, messages.length])
+  // No auto-welcome message - handled in status area instead
 
   // Auto-scroll to bottom
   useEffect(() => {
