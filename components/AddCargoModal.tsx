@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CargoType, UrgencyLevel, CargoOffer, CargoStatus } from '@/lib/types'
+import { CargoType, UrgencyLevel, VehicleType, CargoOffer, CargoStatus } from '@/lib/types'
 import { geocodePostal } from '@/lib/geo'
 
 interface AddCargoModalProps {
@@ -18,6 +18,7 @@ export default function AddCargoModal({ isOpen, onClose, onSubmit }: AddCargoMod
     price: '',
     urgency: UrgencyLevel.MEDIUM,
     cargoType: CargoType.GENERAL,
+    vehicleType: VehicleType.TRUCK,
     fromAddress: '',
     toAddress: '',
     fromCountry: '',
@@ -33,8 +34,6 @@ export default function AddCargoModal({ isOpen, onClose, onSubmit }: AddCargoMod
     loadingDate: '',
     deliveryDate: '',
     postingDate: '',
-    provider: '',
-    providerStatus: 'New, Verified'
   })
 
   if (!isOpen) return null
@@ -73,6 +72,7 @@ export default function AddCargoModal({ isOpen, onClose, onSubmit }: AddCargoMod
       pricePerKg: parseFloat(pricePerKg.toFixed(2)),
       urgency: formData.urgency,
       cargoType: formData.cargoType,
+      vehicleType: formData.vehicleType,
       fromAddress: formData.fromAddress,
       toAddress: formData.toAddress,
       fromCountry: formData.fromCountry,
@@ -92,8 +92,6 @@ export default function AddCargoModal({ isOpen, onClose, onSubmit }: AddCargoMod
         month: 'long', 
         day: 'numeric' 
       }),
-      provider: formData.provider,
-      providerStatus: formData.providerStatus,
       status: CargoStatus.NEW
     }
 
@@ -174,6 +172,23 @@ export default function AddCargoModal({ isOpen, onClose, onSubmit }: AddCargoMod
                   placeholder="e.g. 2.5"
                   className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
                 />
+              </div>
+              <div>
+                <label className="block text-white text-sm font-medium mb-2">Vehicle Type</label>
+                <select
+                  required
+                  value={formData.vehicleType}
+                  onChange={(e) => handleInputChange('vehicleType', e.target.value)}
+                  className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white focus:outline-none focus:border-white"
+                >
+                  <option value={VehicleType.VAN}>Van</option>
+                  <option value={VehicleType.TRUCK}>Truck</option>
+                  <option value={VehicleType.TRAILER}>Trailer</option>
+                  <option value={VehicleType.SEMI_TRAILER}>Semi-Trailer</option>
+                  <option value={VehicleType.REFRIGERATED_TRUCK}>Refrigerated Truck</option>
+                  <option value={VehicleType.FLATBED}>Flatbed</option>
+                  <option value={VehicleType.CONTAINER}>Container</option>
+                </select>
               </div>
               <div>
                 <label className="block text-white text-sm font-medium mb-2">Urgency Level</label>
@@ -342,38 +357,6 @@ export default function AddCargoModal({ isOpen, onClose, onSubmit }: AddCargoMod
             </div>
           </div>
 
-          {/* Provider Information Section */}
-          <div>
-            <h3 className="text-white text-lg font-bold mb-4">Provider Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-white text-sm font-medium mb-2">Provider Name</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.provider}
-                  onChange={(e) => handleInputChange('provider', e.target.value)}
-                  placeholder="e.g. Martinos"
-                  className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white placeholder-[#adadad] focus:outline-none focus:border-white"
-                />
-              </div>
-              <div>
-                <label className="block text-white text-sm font-medium mb-2">Provider Status</label>
-                <select
-                  required
-                  value={formData.providerStatus}
-                  onChange={(e) => handleInputChange('providerStatus', e.target.value)}
-                  className="w-full px-3 py-2 bg-[#363636] border border-[#4d4d4d] rounded-lg text-white focus:outline-none focus:border-white"
-                >
-                  <option value="New, Verified">New, Verified</option>
-                  <option value="Experienced, Premium">Experienced, Premium</option>
-                  <option value="Verified, Specialized">Verified, Specialized</option>
-                  <option value="Premium, Certified">Premium, Certified</option>
-                  <option value="Specialized, Certified">Specialized, Certified</option>
-                </select>
-              </div>
-            </div>
-          </div>
 
           {/* Submit Buttons */}
           <div className="flex gap-3 pt-4">

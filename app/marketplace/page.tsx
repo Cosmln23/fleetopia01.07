@@ -1,8 +1,8 @@
 'use client'
 
-// Mock data removed - using empty array until API integration
+// Mock data removed - using API integration
 import { formatPrice } from '@/lib/formatters'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import AddCargoModal from '@/components/AddCargoModal'
 import CargoDetailsModal from '@/components/CargoDetailsModal'
 import { CargoOffer, CargoType, UrgencyLevel } from '@/lib/types'
@@ -54,6 +54,7 @@ export default function MarketplacePage() {
   const [isCargoDetailsOpen, setIsCargoDetailsOpen] = useState(false)
   const [selectedCargo, setSelectedCargo] = useState<CargoOffer | null>(null)
   const [cargoOffers, setCargoOffers] = useState<CargoOffer[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [filters, setFilters] = useState({
     country: '',
@@ -64,6 +65,28 @@ export default function MarketplacePage() {
     maxPrice: ''
   })
   const { setModalOpen } = useStickyNavigation()
+
+  // Fetch cargo offers from API
+  useEffect(() => {
+    const fetchCargoOffers = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/marketplace-offers')
+        if (response.ok) {
+          const data = await response.json()
+          setCargoOffers(data.offers || [])
+        } else {
+          console.error('Failed to fetch cargo offers')
+        }
+      } catch (error) {
+        console.error('Error fetching cargo offers:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCargoOffers()
+  }, [])
 
   const handleAddCargo = (cargoData: Omit<CargoOffer, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newCargo: CargoOffer = {
@@ -317,7 +340,38 @@ export default function MarketplacePage() {
         )}
       </p>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-3 p-4">
-        {filteredOffers.map((offer) => {
+        {loading ? (
+          // Loading skeleton
+          Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex flex-col bg-[#2d2d2d] rounded-xl border border-[#363636] p-3 animate-pulse">
+              <div className="flex justify-between items-start mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-[#363636] rounded"></div>
+                  <div>
+                    <div className="w-32 h-4 bg-[#363636] rounded mb-1"></div>
+                    <div className="w-24 h-3 bg-[#363636] rounded"></div>
+                  </div>
+                </div>
+                <div className="w-12 h-5 bg-[#363636] rounded-full"></div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                <div className="w-12 h-3 bg-[#363636] rounded"></div>
+                <div className="w-16 h-3 bg-[#363636] rounded"></div>
+                <div className="w-20 h-3 bg-[#363636] rounded"></div>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-[#363636]">
+                <div className="w-16 h-5 bg-[#363636] rounded"></div>
+                <div className="w-12 h-5 bg-[#363636] rounded"></div>
+              </div>
+            </div>
+          ))
+        ) : filteredOffers.length === 0 ? (
+          <div className="col-span-full text-center py-12">
+            <div className="text-[#adadad] text-lg mb-2">No cargo offers found</div>
+            <div className="text-[#adadad] text-sm">Try adjusting your filters or search query</div>
+          </div>
+        ) : (
+          filteredOffers.map((offer) => {
           const distance = getCargoDistance(offer)
           return (
             <div 
@@ -341,8 +395,6 @@ export default function MarketplacePage() {
                 </span>
               </div>
 
-              {/* Distance display */}
-              <p className="text-[#adadad] text-xs mb-2">{formatDistance(distance)}</p>
 
               {/* Compact info grid */}
               <div className="grid grid-cols-3 gap-2 text-xs text-[#adadad] mb-2">
@@ -372,7 +424,8 @@ export default function MarketplacePage() {
               </div>
             </div>
           )
-        })}
+        })
+        )}
       </div>
       <div className="flex items-center justify-center p-4">
         <a href="#" className="flex size-10 items-center justify-center">

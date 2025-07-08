@@ -22,6 +22,16 @@ export enum UrgencyLevel {
   URGENT = 'Urgent'
 }
 
+export enum VehicleType {
+  VAN = 'Van',
+  TRUCK = 'Truck',
+  TRAILER = 'Trailer',
+  SEMI_TRAILER = 'Semi-Trailer',
+  REFRIGERATED_TRUCK = 'Refrigerated Truck',
+  FLATBED = 'Flatbed',
+  CONTAINER = 'Container'
+}
+
 export interface CargoOffer {
   id: string
   title: string
@@ -31,6 +41,7 @@ export interface CargoOffer {
   pricePerKg: number // EUR/kg
   urgency: UrgencyLevel
   cargoType: CargoType
+  vehicleType: VehicleType
   
   // Locations
   fromAddress: string
@@ -54,6 +65,7 @@ export interface CargoOffer {
   // Provider info
   provider: string
   providerStatus: string
+  sender?: User
   
   // Status and metadata
   status: CargoStatus
@@ -92,6 +104,8 @@ export interface User {
   rating?: number
   verified: boolean
   avatar?: string
+  company?: string
+  location?: string
   lastSeen?: string
   isOnline?: boolean
 }
