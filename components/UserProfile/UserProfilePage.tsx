@@ -1,7 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import { UserProfile } from '@/lib/user-profiles'
+import { createConversation } from '@/lib/chat-system'
 import RatingDisplay from './RatingDisplay'
+import ChatModal from '../Chat/ChatModal'
+import RequestQuoteModal from '../Chat/RequestQuoteModal'
 
 interface UserProfilePageProps {
   profile: UserProfile
@@ -9,6 +13,11 @@ interface UserProfilePageProps {
 }
 
 export default function UserProfilePage({ profile, onClose }: UserProfilePageProps) {
+  const [showChatModal, setShowChatModal] = useState(false)
+  const [showQuoteModal, setShowQuoteModal] = useState(false)
+  const [chatConversation, setChatConversation] = useState<any>(null)
+  const [isFavorited, setIsFavorited] = useState(false)
+
   const formatDate = (dateString: string): string => {
     try {
       const date = new Date(dateString)
@@ -23,6 +32,29 @@ export default function UserProfilePage({ profile, onClose }: UserProfilePagePro
   }
 
   const successRate = Math.round((profile.stats.completed / profile.stats.posted) * 100)
+
+  const handleSendMessage = () => {
+    const conversation = createConversation(profile.id, profile.name, profile.avatarUrl)
+    setChatConversation(conversation)
+    setShowChatModal(true)
+  }
+
+  const handleRequestQuote = () => {
+    setShowQuoteModal(true)
+  }
+
+  const handleToggleFavorite = () => {
+    setIsFavorited(!isFavorited)
+    // In real app, this would save to backend or localStorage
+    const favorites = JSON.parse(localStorage.getItem('favoriteProfiles') || '[]')
+    if (!isFavorited) {
+      favorites.push(profile.id)
+      localStorage.setItem('favoriteProfiles', JSON.stringify(favorites))
+    } else {
+      const updated = favorites.filter((id: string) => id !== profile.id)
+      localStorage.setItem('favoriteProfiles', JSON.stringify(updated))
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#1a1a1a]">
@@ -100,14 +132,27 @@ export default function UserProfilePage({ profile, onClose }: UserProfilePagePro
 
             {/* Action Buttons */}
             <div className="flex flex-col gap-2">
-              <button className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors font-medium">
+              <button 
+                onClick={handleSendMessage}
+                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors font-medium"
+              >
                 Send Message
               </button>
-              <button className="px-4 py-2 bg-[#363636] hover:bg-[#4d4d4d] text-white rounded-lg transition-colors font-medium">
+              <button 
+                onClick={handleRequestQuote}
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors font-medium"
+              >
                 Request Quote
               </button>
-              <button className="px-4 py-2 bg-[#363636] hover:bg-[#4d4d4d] text-white rounded-lg transition-colors font-medium">
-                Save Favorite
+              <button 
+                onClick={handleToggleFavorite}
+                className={`px-4 py-2 rounded-lg transition-colors font-medium ${
+                  isFavorited 
+                    ? 'bg-yellow-500 hover:bg-yellow-600 text-white' 
+                    : 'bg-[#363636] hover:bg-[#4d4d4d] text-white'
+                }`}
+              >
+                {isFavorited ? 'Saved ★' : 'Save Favorite'}
               </button>
             </div>
           </div>
@@ -293,6 +338,21 @@ export default function UserProfilePage({ profile, onClose }: UserProfilePagePro
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      {showChatModal && chatConversation && (
+        <ChatModal
+          conversation={chatConversation}
+          onClose={() => setShowChatModal(false)}
+        />
+      )}
+
+      {showQuoteModal && (
+        <RequestQuoteModal
+          profile={profile}
+          onClose={() => setShowQuoteModal(false)}
+        />
+      )}
     </div>
   )
 }
