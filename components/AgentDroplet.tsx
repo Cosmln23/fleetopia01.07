@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useDispatcherStore } from '@/app/dispatcher/state/store'
+import AgentChatPanel from './AgentChatPanel'
 
 interface AgentDecision {
   id: string
@@ -135,7 +136,7 @@ export default function AgentDroplet({ agentPopupOpen, setAgentPopupOpen }: Agen
       {agentPopupOpen && (
         <div 
           id="agent-popup"
-          className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-full bg-[#1a1a1a] shadow-xl border border-[#4d4d4d] z-20"
+          className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-full bg-[#1a1a1a] shadow-xl border border-[#4d4d4d] z-20 flex flex-col"
           style={{
             width: '512px',
             height: '512px',
@@ -144,9 +145,9 @@ export default function AgentDroplet({ agentPopupOpen, setAgentPopupOpen }: Agen
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="p-4">
-            {/* Header */}
-            <div className="flex items-center gap-2 mb-3">
+          {/* Header - 50px */}
+          <div className="h-12 flex items-center justify-between px-4 border-b border-[#363636]">
+            <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center">
                 {agentEnabled ? (
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -156,58 +157,71 @@ export default function AgentDroplet({ agentPopupOpen, setAgentPopupOpen }: Agen
               </div>
               <h4 className="text-white font-bold text-sm">Agent AI</h4>
             </div>
+            <button
+              onClick={() => setAgentPopupOpen(false)}
+              className="text-[#666] hover:text-white transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
 
-            {/* Status și decizii recente */}
+          {/* Chat Panel - flex-grow */}
+          <div className="flex-1 min-h-0">
+            <AgentChatPanel agentEnabled={agentEnabled} />
+          </div>
+
+          {/* Agent Status - auto-height */}
+          <div className="border-t border-[#363636] p-3">
             {!agentEnabled ? (
-              <div className="text-center py-4">
-                <div className="text-2xl mb-2">😴</div>
+              <div className="text-center py-2">
+                <div className="text-xl mb-1">😴</div>
                 <p className="text-[#666] text-sm">Agent is disabled</p>
-                <p className="text-[#666] text-xs mt-1">Enable to see decisions</p>
+                <p className="text-[#666] text-xs">Enable to see decisions</p>
               </div>
             ) : recentDecisions.length === 0 ? (
-              <div className="text-center py-4">
-                <div className="text-2xl mb-2">🔍</div>
+              <div className="text-center py-2">
+                <div className="text-xl mb-1">🔍</div>
                 <p className="text-[#666] text-sm">No decisions yet</p>
-                <p className="text-[#666] text-xs mt-1">Waiting for agent activity</p>
+                <p className="text-[#666] text-xs">Waiting for agent activity</p>
               </div>
             ) : (
               <div>
-                <p className="text-sm text-[#adadad] mb-3">Recent agent decisions ({recentDecisions.length})</p>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {recentDecisions.slice(0, 3).map((decision) => (
+                <p className="text-xs text-[#adadad] mb-2">Recent decisions ({recentDecisions.length})</p>
+                <div className="space-y-1 max-h-20 overflow-y-auto">
+                  {recentDecisions.slice(0, 2).map((decision) => (
                     <div 
                       key={decision.id}
-                      className={`p-2 rounded-lg border ${getLevelBg(decision.type)} bg-[#2d2d2d]/50`}
+                      className={`p-1 rounded text-xs border ${getLevelBg(decision.type)} bg-[#2d2d2d]/50`}
                     >
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className={`text-xs font-bold px-1.5 py-0.5 rounded ${getLevelColor(decision.type)} bg-current/10`}>
+                      <div className="flex items-center gap-1">
+                        <div className={`text-xs font-bold px-1 py-0.5 rounded ${getLevelColor(decision.type)} bg-current/10`}>
                           {decision.type}
                         </div>
-                        <span className="text-[#666] text-xs">{formatTimeAgo(decision.timestamp)}</span>
+                        <span className="text-white text-xs truncate flex-1">{decision.result}</span>
                       </div>
-                      <p className="text-white text-xs font-medium truncate">{decision.result}</p>
-                      <p className="text-[#666] text-xs">{decision.action}</p>
                     </div>
                   ))}
                 </div>
               </div>
             )}
+          </div>
 
-            {/* Footer cu acțiuni */}
-            <div className="mt-4 pt-3 border-t border-[#363636] flex items-center justify-between">
-              <div className="text-[#666] text-xs">
-                {agentEnabled ? 'Live monitoring' : 'Enable agent to start'}
-              </div>
-              <button 
-                className="text-blue-400 text-xs hover:text-blue-300 transition-colors"
-                onClick={() => {
-                  setAgentPopupOpen(false)
-                  window.location.href = '/dispatcher'
-                }}
-              >
-                View All →
-              </button>
+          {/* Footer - 50px */}
+          <div className="h-12 border-t border-[#363636] px-4 flex items-center justify-between">
+            <div className="text-[#666] text-xs">
+              {agentEnabled ? 'Live monitoring' : 'Enable agent to start'}
             </div>
+            <button 
+              className="text-blue-400 text-xs hover:text-blue-300 transition-colors"
+              onClick={() => {
+                setAgentPopupOpen(false)
+                window.location.href = '/dispatcher'
+              }}
+            >
+              View All →
+            </button>
           </div>
         </div>
       )}
