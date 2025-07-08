@@ -202,7 +202,7 @@ export default function AgentDroplet({ agentPopupOpen, setAgentPopupOpen }: Agen
           <div className="h-12 border-t border-[#363636] p-2 flex gap-2">
             <input
               type="text"
-              placeholder={agentEnabled ? "Ask agent..." : "Enable agent to chat"}
+              placeholder={agentEnabled ? "Ask agent about page activities..." : "Enable agent to ask about page"}
               disabled={!agentEnabled}
               className="flex-1 bg-[#2d2d2d] border border-[#363636] rounded px-2 py-1 text-white text-sm placeholder-[#666] focus:outline-none focus:border-green-500 disabled:opacity-50"
               onKeyPress={(e) => {

@@ -53,21 +53,92 @@ export default function AgentChatPanel({ agentEnabled }: AgentChatPanelProps) {
     }
   }
 
+  const getPageContext = () => {
+    // Mock page data - în production va citi din store-uri
+    return {
+      vehicles: [
+        { id: 'v001', driver: 'John Smith', location: 'Amsterdam, Netherlands', status: 'available' },
+        { id: 'v002', driver: 'Maria Garcia', location: 'Berlin, Germany', status: 'in_transit', route: 'Munich → Vienna', eta: '18:30' },
+        { id: 'v003', driver: 'Pierre Dubois', location: 'Lyon, France', status: 'loading' }
+      ],
+      cargoOffers: [
+        { id: 'c001', route: 'Amsterdam → Berlin', distance: '650km', shipper: 'Marco Rossi', status: 'quote_sent', amount: '€850' },
+        { id: 'c002', route: 'Munich → Vienna', distance: '435km', shipper: 'Klaus Müller', status: 'analyzing' },
+        { id: 'c003', route: 'Lyon → Milan', distance: '320km', shipper: 'Sophie Dubois', status: 'monitoring' }
+      ],
+      agentLevels: {
+        L0: { enabled: true, description: 'Automatic cargo opportunity detection' },
+        L1: { enabled: true, description: 'Automatic cost and profit calculation' },
+        L2: { enabled: false, description: 'Automatic quote generation and sending' },
+        L3: { enabled: true, description: 'Automatic pricing optimization' },
+        L4: { enabled: false, description: 'Automatic negotiation management' }
+      }
+    }
+  }
+
+  const categorizeUserInput = (message: string): 'page-activity' | 'off-topic' => {
+    const pageKeywords = [
+      'vehicle', 'cargo', 'offer', 'quote', 'decision', 'calculate', 'suggest', 'recommend',
+      'where', 'status', 'margin', 'route', 'analyze', 'optimize', 'level', 'L0', 'L1', 'L2', 'L3', 'L4',
+      'distance', 'cost', 'price', 'shipper', 'driver', 'location', 'available', 'monitoring'
+    ]
+    
+    return pageKeywords.some(keyword => message.toLowerCase().includes(keyword)) ? 'page-activity' : 'off-topic'
+  }
+
   const generateAgentResponse = (userMessage: string): AgentChatMessage => {
+    const context = getPageContext()
+    const category = categorizeUserInput(userMessage)
     const lowerMessage = userMessage.toLowerCase()
     
     let response = ''
     
-    if (lowerMessage.includes('margin') || lowerMessage.includes('profit')) {
-      response = 'Based on L1 analysis, I recommend 15-18% margins for current routes. Munich routes show 16.5% optimal.'
-    } else if (lowerMessage.includes('quote') || lowerMessage.includes('price')) {
-      response = 'I just sent a €850 quote for Amsterdam→Berlin. L2 auto-quoting is active on 3 offers.'
-    } else if (lowerMessage.includes('status') || lowerMessage.includes('offers')) {
-      response = 'Monitoring 5 cargo offers. 2 quotes sent, 1 negotiation active. L0-L4 systems running.'
-    } else if (lowerMessage.includes('help') || lowerMessage.includes('?')) {
-      response = 'I can help with: pricing analysis, quote generation, route optimization, and negotiation. What do you need?'
+    if (category === 'off-topic') {
+      response = 'I only track dispatcher page activities. Ask me about: vehicle locations, cargo offers, agent decisions, route calculations, or current page status.'
     } else {
-      response = 'I understand. Let me analyze that and get back to you with recommendations.'
+      // Vehicle location queries
+      if (lowerMessage.includes('where') && (lowerMessage.includes('vehicle') || lowerMessage.includes('driver'))) {
+        response = `Vehicle locations: ${context.vehicles.map(v => 
+          `${v.driver} in ${v.location} (${v.status})`
+        ).join(', ')}`
+      }
+      // Cargo/offers queries
+      else if (lowerMessage.includes('cargo') || lowerMessage.includes('offer')) {
+        response = `Active cargo: ${context.cargoOffers.length} offers. ${context.cargoOffers.map(c => 
+          `${c.route} (${c.status})`
+        ).join(', ')}`
+      }
+      // Agent levels queries
+      else if (lowerMessage.includes('level') || lowerMessage.includes('L')) {
+        const activeLevels = Object.entries(context.agentLevels)
+          .filter(([_, level]) => level.enabled)
+          .map(([key, _]) => key)
+        response = `Active levels: ${activeLevels.join(', ')}. L0 monitoring offers, L1 calculating costs, L3 optimizing margins.`
+      }
+      // Quote/pricing queries
+      else if (lowerMessage.includes('quote') || lowerMessage.includes('price')) {
+        response = 'L2 sent quote €850 for Amsterdam→Berlin: 650km × €1.20/km = €780 + €70 margin (9%). L3 suggests increasing to 16% (+€120).'
+      }
+      // Margin/profit queries
+      else if (lowerMessage.includes('margin') || lowerMessage.includes('profit')) {
+        response = 'L1 calculated optimal margins: Amsterdam→Berlin 15%, Munich→Vienna 16%, Lyon→Milan 14%. L3 recommends increasing by 2% based on fuel trends.'
+      }
+      // Status/summary queries
+      else if (lowerMessage.includes('status') || lowerMessage.includes('summary')) {
+        response = `Page status: ${context.vehicles.length} vehicles (2 available), ${context.cargoOffers.length} cargo offers, ${Object.values(context.agentLevels).filter(l => l.enabled).length}/5 agent levels active.`
+      }
+      // Decision queries
+      else if (lowerMessage.includes('decision') || lowerMessage.includes('why')) {
+        response = 'Recent decisions: L0 detected Amsterdam→Berlin offer, L1 calculated €780 base cost, L3 suggested 15% margin, result: €850 quote sent.'
+      }
+      // Suggestions/recommendations
+      else if (lowerMessage.includes('suggest') || lowerMessage.includes('recommend')) {
+        response = 'L3 suggestions: Increase Amsterdam→Berlin margin to 16% (+€120), monitor Munich→Vienna for better rates, optimize Lyon→Milan route timing.'
+      }
+      // Default page summary
+      else {
+        response = `Monitoring dispatcher page: ${context.vehicles.filter(v => v.status === 'available').length} available vehicles, ${context.cargoOffers.filter(c => c.status === 'quote_sent').length} quotes sent, L0-L1-L3 systems active.`
+      }
     }
 
     return {
