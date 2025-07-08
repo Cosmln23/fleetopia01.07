@@ -187,22 +187,12 @@ export default function AgentDroplet({ agentPopupOpen, setAgentPopupOpen }: Agen
                 <p className="text-[#666] text-xs">Waiting for agent activity</p>
               </div>
             ) : (
-              <div>
-                <p className="text-xs text-[#adadad] mb-2">Recent decisions ({recentDecisions.length})</p>
-                <div className="space-y-1 max-h-20 overflow-y-auto">
-                  {recentDecisions.slice(0, 2).map((decision) => (
-                    <div 
-                      key={decision.id}
-                      className={`p-1 rounded text-xs border ${getLevelBg(decision.type)} bg-[#2d2d2d]/50`}
-                    >
-                      <div className="flex items-center gap-1">
-                        <div className={`text-xs font-bold px-1 py-0.5 rounded ${getLevelColor(decision.type)} bg-current/10`}>
-                          {decision.type}
-                        </div>
-                        <span className="text-white text-xs truncate flex-1">{decision.result}</span>
-                      </div>
-                    </div>
-                  ))}
+              <div className="py-2">
+                <div className="bg-[#2d2d2d] border border-[#363636] rounded-lg p-3">
+                  <p className="text-white text-sm mb-2">Hi! I'm monitoring cargo offers. How can I help?</p>
+                  <p className="text-[#adadad] text-xs">
+                    {new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
+                  </p>
                 </div>
               </div>
             )}
