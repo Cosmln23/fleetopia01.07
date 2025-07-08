@@ -14,7 +14,6 @@ import NoGpsModal from './components/NoGpsModal'
 import NoGpsLocationModal from './components/NoGpsLocationModal'
 import AutoAssignSection from './components/AutoAssignSection'
 import AddFleetModal from '@/components/AddFleetModal'
-import AgentChatIntegration from '@/components/AgentChatIntegration'
 
 // Temporary interface for production build (replace with real API later)
 interface DispatcherSuggestion {
@@ -304,9 +303,6 @@ export default function DispatcherPage() {
       {/* DISPATCHER AI CONTENT */}
       <div className="gap-1 px-6 flex flex-1 justify-center py-5">
         <div className="layout-content-container flex flex-col w-80">
-          {/* Agent Chat Integration - curba organică deasupra DispatcherAI */}
-          <AgentChatIntegration />
-          
           <div className="flex flex-wrap justify-between gap-3 p-4">
             <p className="text-white tracking-light text-[32px] font-bold leading-tight min-w-72">Dispatcher AI</p>
           </div>
