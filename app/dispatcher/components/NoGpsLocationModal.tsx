@@ -711,7 +711,7 @@ export default function NoGpsLocationModal({
                       {suggestions.map((suggestion, index) => (
                         <div
                           key={suggestion.place_id}
-                          ref={el => suggestionRefs.current[index] = el}
+                          ref={(el) => { suggestionRefs.current[index] = el; }}
                           className={`px-4 py-3 cursor-pointer transition-colors border-b border-[#363636] last:border-b-0 ${
                             index === selectedSuggestionIndex 
                               ? 'bg-[#4d4d4d] text-white' 

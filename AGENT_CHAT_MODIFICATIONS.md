@@ -171,10 +171,11 @@ if (message.includes('status')) → L0 monitoring status
 1. ✅ **Create AgentChatPanel** - Done
 2. ✅ **Integrate with AgentDroplet** - Done  
 3. ✅ **Position input correctly** - Done
-4. ⏳ **Remove ChatWidget from ClientLayout** - Next
-5. ⏳ **Remove UserChatDropdown** - Next
-6. ⏳ **Clean up unused imports** - Next
-7. ⏳ **Test chat functionality** - Next
+4. ✅ **Fix message sending functionality** - Done
+5. ⏳ **Remove ChatWidget from ClientLayout** - Next
+6. ⏳ **Remove UserChatDropdown** - Next
+7. ⏳ **Clean up unused imports** - Next
+8. ⏳ **Test chat functionality** - Next
 
 ## 💡 Benefits
 

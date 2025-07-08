@@ -108,10 +108,12 @@ export function useChatNegotiation(cargoId: string) {
     switch (data.type) {
       case 'message':
         addChatMessage({
+          id: data.id || crypto.randomUUID(),
           cargoId: data.cargoId,
           content: data.content,
           senderId: data.senderId,
           senderType: data.senderType,
+          timestamp: data.timestamp || new Date().toISOString(),
           status: 'sent'
         })
         break
@@ -161,10 +163,12 @@ export function useChatNegotiation(cargoId: string) {
       const agentMessage = `Agent suggests: ${data.suggestion}. Counter-offer: €${data.counterPrice}`
       
       addChatMessage({
+        id: crypto.randomUUID(),
         cargoId,
         content: agentMessage,
         senderId: 'agent-system',
         senderType: 'agent',
+        timestamp: new Date().toISOString(),
         status: 'sent'
       })
       
@@ -235,76 +239,42 @@ export function useChatNegotiation(cargoId: string) {
       return { success: false, error: 'Message cannot be empty' }
     }
 
+    const messageId = crypto.randomUUID();
+
     // Add message to local state with sending status
     const messageData = {
+      id: messageId,
       cargoId,
       content: content.trim(),
       senderId: 'current-user', // This should come from auth context
       senderType,
-      status: 'sending' as const
-    }
+      timestamp: new Date().toISOString(),
+      status: 'sending' as const,
+    };
 
-    addChatMessage(messageData)
-    const messageId = Date.now().toString() + Math.random().toString(36).substr(2, 9)
+    addChatMessage(messageData);
 
     try {
-      let success = false
-
       if (connectionState.connectionType === 'websocket' && wsRef.current?.readyState === WebSocket.OPEN) {
-        // Send via WebSocket
-        wsRef.current.send(JSON.stringify({
-          type: 'message',
-          messageId,
-          ...messageData
-        }))
-        success = true
-      } else {
-        // Send via HTTP API
-        const response = await fetch(`/api/chat/${cargoId}/messages`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(messageData),
-        })
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-
-        success = true
-      }
-
-      if (success) {
+        wsRef.current.send(JSON.stringify({ type: 'message', ...messageData }))
         updateMessageStatus(messageId, 'sent')
         return { success: true, messageId }
+      } else {
+        throw new Error('Not connected via WebSocket')
       }
-
     } catch (error) {
-      console.error('Failed to send message:', error)
-      
-      // Update message status to failed
+      console.warn('Failed to send message, adding to retry queue:', error)
       updateMessageStatus(messageId, 'failed')
-      
-      // Add to retry queue
       addToRetryQueue({
+        id: messageId,
         type: 'message',
-        data: { messageId, ...request }
+        data: messageData,
+        retryCount: 0,
+        lastAttempt: new Date().toISOString()
       })
-
-      // Attempt retry after delay
-      setTimeout(() => {
-        retryMessage(messageId, request)
-      }, MESSAGE_RETRY_DELAY)
-
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to send message'
-      }
+      return { success: false, error: (error as Error).message, messageId }
     }
-
-    return { success: false, error: 'Unknown error occurred' }
-  }, [cargoId, connectionState.connectionType, addChatMessage, updateMessageStatus, addToRetryQueue])
+  }, [cargoId, addChatMessage, updateMessageStatus, connectionState, addToRetryQueue])
 
   // Retry failed message
   const retryMessage = useCallback(async (messageId: string, request: SendMessageRequest) => {

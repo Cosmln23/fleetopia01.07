@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useDispatcherStore } from '@/app/dispatcher/state/store'
-import AgentChatPanel from './AgentChatPanel'
+import AgentChatPanel, { AgentChatPanelRef } from './AgentChatPanel'
 
 interface AgentDecision {
   id: string
@@ -21,6 +21,8 @@ interface AgentDropletProps {
 
 export default function AgentDroplet({ agentPopupOpen, setAgentPopupOpen }: AgentDropletProps) {
   const { agentEnabled } = useDispatcherStore()
+  const [inputValue, setInputValue] = useState('')
+  const chatPanelRef = useRef<AgentChatPanelRef>(null)
 
   // Mock recent agent decisions
   const recentDecisions: AgentDecision[] = [
@@ -169,7 +171,7 @@ export default function AgentDroplet({ agentPopupOpen, setAgentPopupOpen }: Agen
 
           {/* Chat Messages Only - flex-grow */}
           <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
-            <AgentChatPanel agentEnabled={agentEnabled} />
+            <AgentChatPanel ref={chatPanelRef} agentEnabled={agentEnabled} />
           </div>
 
           {/* Agent Status - auto-height */}
@@ -202,20 +204,27 @@ export default function AgentDroplet({ agentPopupOpen, setAgentPopupOpen }: Agen
           <div className="h-12 border-t border-[#363636] p-2 flex gap-2">
             <input
               type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
               placeholder={agentEnabled ? "Ask agent about page activities..." : "Enable agent to ask about page"}
               disabled={!agentEnabled}
               className="flex-1 bg-[#2d2d2d] border border-[#363636] rounded px-2 py-1 text-white text-sm placeholder-[#666] focus:outline-none focus:border-green-500 disabled:opacity-50"
               onKeyPress={(e) => {
-                if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
-                  // Simulez trimiterea mesajului
-                  console.log('Message sent:', (e.target as HTMLInputElement).value);
-                  (e.target as HTMLInputElement).value = '';
+                if (e.key === 'Enter' && inputValue.trim()) {
+                  chatPanelRef.current?.sendExternalMessage(inputValue)
+                  setInputValue('')
                 }
               }}
             />
             <button
-              disabled={!agentEnabled}
+              disabled={!agentEnabled || !inputValue.trim()}
               className="w-8 h-8 bg-green-500 hover:bg-green-600 disabled:bg-[#363636] disabled:cursor-not-allowed text-white rounded flex items-center justify-center transition-colors"
+              onClick={() => {
+                if (inputValue.trim()) {
+                  chatPanelRef.current?.sendExternalMessage(inputValue)
+                  setInputValue('')
+                }
+              }}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />

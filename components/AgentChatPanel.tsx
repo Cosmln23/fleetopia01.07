@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import { useDispatcherStore } from '@/app/dispatcher/state/store'
 
 interface AgentChatMessage {
@@ -15,7 +15,11 @@ interface AgentChatPanelProps {
   agentEnabled: boolean
 }
 
-export default function AgentChatPanel({ agentEnabled }: AgentChatPanelProps) {
+export interface AgentChatPanelRef {
+  sendExternalMessage: (message: string) => void
+}
+
+const AgentChatPanel = forwardRef<AgentChatPanelRef, AgentChatPanelProps>(({ agentEnabled }, ref) => {
   const [messages, setMessages] = useState<AgentChatMessage[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
@@ -164,6 +168,29 @@ export default function AgentChatPanel({ agentEnabled }: AgentChatPanelProps) {
     })
   }
 
+  // Expun funcția pentru trimitere din exterior
+  useImperativeHandle(ref, () => ({
+    sendExternalMessage: (message: string) => {
+      if (!agentEnabled || !message.trim()) return
+      
+      const userMessage: AgentChatMessage = {
+        id: Date.now().toString(),
+        sender: 'user',
+        content: message,
+        timestamp: new Date().toISOString()
+      }
+
+      setMessages(prev => [...prev, userMessage])
+
+      setIsTyping(true)
+      setTimeout(() => {
+        const agentResponse = generateAgentResponse(message)
+        setMessages(prev => [...prev, agentResponse])
+        setIsTyping(false)
+      }, 1500)
+    }
+  }))
+
   return (
     <>
       {/* Messages Area DOAR */}
@@ -208,23 +235,10 @@ export default function AgentChatPanel({ agentEnabled }: AgentChatPanelProps) {
       )}
       
       <div ref={messagesEndRef} />
-
-      {/* Returnez și funcțiile pentru folosire în AgentDroplet */}
-      <div style={{ display: 'none' }}>
-        <input
-          ref={(el) => {
-            if (el) {
-              (window as any).agentChatHandlers = {
-                newMessage,
-                setNewMessage,
-                handleSendMessage,
-                handleKeyPress,
-                agentEnabled
-              }
-            }
-          }}
-        />
-      </div>
     </>
   )
-}
+})
+
+AgentChatPanel.displayName = 'AgentChatPanel'
+
+export default AgentChatPanel

@@ -74,15 +74,19 @@ export function useQuoteManagement() {
     }
 
     setIsSubmitting(true)
+    const quoteId = crypto.randomUUID();
 
     try {
       // Add quote to store with pending status
       const quoteData = {
+        id: quoteId,
         cargoId,
         price,
         message,
         source,
-        status: 'pending' as const
+        status: 'pending' as const,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       }
       
       addQuote(quoteData)
@@ -112,10 +116,10 @@ export function useQuoteManagement() {
       }
 
       const result = await response.json()
-      const quoteId = result.id
+      const serverQuoteId = result.id
 
       // Update quote status to sent
-      updateQuoteStatus(quoteId, 'pending')
+      updateQuoteStatus(serverQuoteId, 'pending')
 
       // If L3 is enabled, we'll track this for learning
       if (levelSettings.L3) {
@@ -124,14 +128,14 @@ export function useQuoteManagement() {
           // This would normally be handled by WebSocket or polling
           // For now, simulate random feedback after 30 seconds
           const success = Math.random() > 0.5
-          logFeedback(quoteId, success)
-          updateQuoteStatus(quoteId, success ? 'accepted' : 'refused')
+          logFeedback(serverQuoteId, success)
+          updateQuoteStatus(serverQuoteId, success ? 'accepted' : 'refused')
         }, 30000)
       }
 
       return {
         success: true,
-        quoteId
+        quoteId: serverQuoteId
       }
 
     } catch (error) {
@@ -139,8 +143,11 @@ export function useQuoteManagement() {
       
       // Add to retry queue
       addToRetryQueue({
+        id: quoteId,
         type: 'quote',
-        data: request
+        data: request,
+        retryCount: 0,
+        lastAttempt: new Date().toISOString()
       })
 
       return {

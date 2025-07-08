@@ -1,5 +1,6 @@
 'use client'
 
+import { useUser } from '@clerk/nextjs'
 import { useState } from 'react'
 import { CargoType, UrgencyLevel, VehicleType, CargoOffer, CargoStatus } from '@/lib/types'
 import { geocodePostal } from '@/lib/geo'
@@ -11,6 +12,7 @@ interface AddCargoModalProps {
 }
 
 export default function AddCargoModal({ isOpen, onClose, onSubmit }: AddCargoModalProps) {
+  const { user } = useUser()
   const [formData, setFormData] = useState({
     title: '',
     weight: '',
@@ -92,6 +94,8 @@ export default function AddCargoModal({ isOpen, onClose, onSubmit }: AddCargoMod
         month: 'long', 
         day: 'numeric' 
       }),
+      provider: user?.fullName || 'Fleet-Platform',
+      providerStatus: 'Verified',
       status: CargoStatus.NEW
     }
 

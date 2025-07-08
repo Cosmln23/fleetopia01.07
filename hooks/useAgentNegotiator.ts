@@ -294,10 +294,12 @@ export function useAgentNegotiator() {
           if (result.success && result.quoteId) {
             // Add agent message to chat
             addChatMessage({
+              id: crypto.randomUUID(),
               cargoId: offer.id,
               content: `Agent auto-sent quote: €${l2Suggestion.price}. ${l2Suggestion.reasoning}`,
               senderId: 'agent-system',
               senderType: 'agent',
+              timestamp: new Date().toISOString(),
               status: 'sent'
             })
           }
@@ -378,10 +380,12 @@ export function useAgentNegotiator() {
     }
 
     addChatMessage({
+      id: crypto.randomUUID(),
       cargoId,
       content: message,
       senderId: 'agent-system',
       senderType: 'agent',
+      timestamp: new Date().toISOString(),
       status: 'sent'
     })
   }, [addChatMessage])
