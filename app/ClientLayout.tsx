@@ -4,18 +4,14 @@ import { useState } from 'react'
 import { useStickyNavigation } from '@/contexts/StickyNavigationContext'
 import QueryProvider from '@/contexts/QueryProvider'
 import FullNavigationBar from '@/components/FullNavigationBar'
-import ChatWidget from '@/components/ChatWidget'
-import UserChatDropdown from '@/components/UserChatDropdown'
 import NotificationsDropdown from '@/components/NotificationsDropdown'
-import { getUnreadMessagesCount, getUnreadNotificationsCount } from '@/lib/communication-data'
+import { getUnreadNotificationsCount } from '@/lib/communication-data'
 import { UserButton } from '@clerk/nextjs'
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const { isModalOpen } = useStickyNavigation()
-  const [isChatOpen, setIsChatOpen] = useState(false)
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
   
-  const unreadMessagesCount = getUnreadMessagesCount()
   const unreadNotificationsCount = getUnreadNotificationsCount()
   
   return (
@@ -35,30 +31,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             </div>
             <div className="flex flex-1 justify-end gap-8">
               <div className="flex items-center gap-4">
-                {/* Chat Icon */}
-                <button
-                  onClick={() => {
-                    setIsChatOpen(!isChatOpen)
-                    setIsNotificationsOpen(false)
-                  }}
-                  className="relative text-[#adadad] hover:text-white transition-colors"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-                    <path d="M216,48H40A16,16,0,0,0,24,64V224a8,8,0,0,0,13.07,6.19L60.69,208H216a16,16,0,0,0,16-16V64A16,16,0,0,0,216,48ZM40,192V64H216V192H62.93a8,8,0,0,0-4.8,1.6Z"></path>
-                  </svg>
-                  {unreadMessagesCount > 0 && (
-                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">{unreadMessagesCount}</span>
-                    </div>
-                  )}
-                </button>
-
                 {/* Notifications Icon */}
                 <button
-                  onClick={() => {
-                    setIsNotificationsOpen(!isNotificationsOpen)
-                    setIsChatOpen(false)
-                  }}
+                  onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
                   className="relative text-[#adadad] hover:text-white transition-colors"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
@@ -104,11 +79,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           </footer>
           
           {/* Communication System */}
-          <UserChatDropdown isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
           <NotificationsDropdown isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} />
-          
-          {/* Sticky Chat Widget */}
-          <ChatWidget />
         </div>
       </div>
     </>
