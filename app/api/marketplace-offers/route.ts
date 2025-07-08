@@ -123,7 +123,20 @@ export async function GET(request: NextRequest) {
       providerStatus: offer.provider_status,
       status: offer.status,
       createdAt: new Date(offer.created_ts).toISOString(),
-      updatedAt: new Date(offer.updated_ts).toISOString()
+      updatedAt: new Date(offer.updated_ts).toISOString(),
+      // Add sender information if available
+      sender: offer.sender_name ? {
+        id: offer.sender_id,
+        name: offer.sender_name,
+        email: offer.sender_email,
+        rating: offer.sender_rating,
+        verified: offer.sender_verified,
+        avatar: offer.sender_avatar,
+        company: offer.sender_company,
+        location: offer.sender_location,
+        lastSeen: offer.sender_last_seen ? new Date(offer.sender_last_seen).toISOString() : undefined,
+        isOnline: offer.sender_is_online
+      } : undefined
     }))
 
     // If no new offers since timestamp, return 204

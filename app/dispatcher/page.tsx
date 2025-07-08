@@ -14,6 +14,7 @@ import NoGpsModal from './components/NoGpsModal'
 import NoGpsLocationModal from './components/NoGpsLocationModal'
 import AutoAssignSection from './components/AutoAssignSection'
 import AddFleetModal from '@/components/AddFleetModal'
+import LevelToggle from '@/components/LevelToggle'
 
 // Temporary interface for production build (replace with real API later)
 interface DispatcherSuggestion {
@@ -358,29 +359,57 @@ export default function DispatcherPage() {
           <h3 className="text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Level Implementation</h3>
           
           {/* Level Items */}
-          {(Object.keys(levelDescriptions) as Array<keyof LevelSettings>).map((level) => (
-            <div key={level} className="flex items-center gap-4 bg-[#1a1a1a] px-4 min-h-[60px] py-2 justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-white text-base font-medium leading-normal">{level}</span>
-                <span className="text-[#adadad] text-sm font-normal leading-normal">– {levelDescriptions[level]}</span>
-              </div>
-              <div className="shrink-0">
-                <button
-                  onClick={() => handleLevelToggle(level)}
-                  disabled={!isAgentActive}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
-                    !isAgentActive 
-                      ? 'bg-[#363636] text-[#666666] cursor-not-allowed'
-                      : levelSettings[level]
-                        ? 'bg-[#0bda0b] text-white hover:bg-[#0bc40b]'
-                        : 'bg-[#363636] text-[#adadad] hover:bg-[#4d4d4d]'
-                  }`}
-                >
-                  {levelSettings[level] ? 'ON' : 'OFF'}
-                </button>
-              </div>
-            </div>
-          ))}
+          <div className="px-4 space-y-3">
+            <LevelToggle
+              id="L0"
+              label="Radar"
+              shortDesc="Automatic cargo opportunity detection"
+              detailedDesc="Monitors external marketplaces and automatically detects new cargo offers that match your criteria"
+              enabled={levelSettings.L0}
+              disabled={!isAgentActive}
+              onToggle={(id, enabled) => handleLevelToggle(id as keyof LevelSettings)}
+            />
+            
+            <LevelToggle
+              id="L1"
+              label="Calculator"
+              shortDesc="Automatic cost and profit calculation"
+              detailedDesc="Automatically calculates costs (fuel, driver, fees) and suggests optimal prices based on distance and profitability"
+              enabled={levelSettings.L1}
+              disabled={!isAgentActive}
+              onToggle={(id, enabled) => handleLevelToggle(id as keyof LevelSettings)}
+            />
+            
+            <LevelToggle
+              id="L2"
+              label="Quote Bot"
+              shortDesc="Automatic quote generation and sending"
+              detailedDesc="Automatically sends quotes to clients based on L1 calculations when confidence score is high"
+              enabled={levelSettings.L2}
+              disabled={!isAgentActive}
+              onToggle={(id, enabled) => handleLevelToggle(id as keyof LevelSettings)}
+            />
+            
+            <LevelToggle
+              id="L3"
+              label="Auto-Tune"
+              shortDesc="Automatic pricing optimization"
+              detailedDesc="Learns from quote feedback and automatically optimizes pricing strategies to improve acceptance rates"
+              enabled={levelSettings.L3}
+              disabled={!isAgentActive}
+              onToggle={(id, enabled) => handleLevelToggle(id as keyof LevelSettings)}
+            />
+            
+            <LevelToggle
+              id="L4"
+              label="Negotiation Assist"
+              shortDesc="Automatic negotiation management"
+              detailedDesc="Automatically manages negotiations, evaluates counter-offers and suggests optimal responses during negotiation process"
+              enabled={levelSettings.L4}
+              disabled={!isAgentActive}
+              onToggle={(id, enabled) => handleLevelToggle(id as keyof LevelSettings)}
+            />
+          </div>
         </div>
 
         {/* Main Content Area */}

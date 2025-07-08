@@ -53,7 +53,18 @@ export const cargoDb = {
     offset?: number
   }) {
     let query_text = `
-      SELECT * FROM cargo 
+      SELECT c.*, 
+             u.name as sender_name, 
+             u.email as sender_email, 
+             u.rating as sender_rating, 
+             u.verified as sender_verified, 
+             u.avatar as sender_avatar, 
+             u.company as sender_company, 
+             u.location as sender_location, 
+             u.last_seen as sender_last_seen, 
+             u.is_online as sender_is_online
+      FROM cargo c
+      LEFT JOIN users u ON c.sender_id = u.id
       WHERE 1=1
     `
     const params: any[] = []
@@ -140,7 +151,21 @@ export const cargoDb = {
 
   // Get single cargo by ID
   async getById(id: string) {
-    const result = await query('SELECT * FROM cargo WHERE id = $1', [id])
+    const result = await query(`
+      SELECT c.*, 
+             u.name as sender_name, 
+             u.email as sender_email, 
+             u.rating as sender_rating, 
+             u.verified as sender_verified, 
+             u.avatar as sender_avatar, 
+             u.company as sender_company, 
+             u.location as sender_location, 
+             u.last_seen as sender_last_seen, 
+             u.is_online as sender_is_online
+      FROM cargo c
+      LEFT JOIN users u ON c.sender_id = u.id
+      WHERE c.id = $1
+    `, [id])
     return result.rows[0] || null
   },
 

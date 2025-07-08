@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { User } from '@/lib/types'
 
 interface SenderHeaderProps {
@@ -9,6 +10,7 @@ interface SenderHeaderProps {
 }
 
 export default function SenderHeader({ sender, postedAt, providerName }: SenderHeaderProps) {
+  const router = useRouter()
   // Format date
   const formatDate = (dateString: string): string => {
     try {
@@ -101,8 +103,7 @@ export default function SenderHeader({ sender, postedAt, providerName }: SenderH
           <button 
             className="text-xs text-green-400 hover:text-green-300 hover:underline transition-colors"
             onClick={() => {
-              // TODO: Navigate to user profile
-              console.log('Navigate to profile:', sender.id)
+              router.push(`/profile/${sender.id}`)
             }}
           >
             View Profile
