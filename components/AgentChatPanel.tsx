@@ -106,73 +106,66 @@ export default function AgentChatPanel({ agentEnabled }: AgentChatPanelProps) {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Messages Area - flex-grow */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
-        {messages.length === 0 ? (
-          <div className="text-center text-[#666] text-sm py-4">
-            {agentEnabled ? 'Start a conversation...' : 'Enable agent to chat'}
-          </div>
-        ) : (
-          messages.map((message) => (
+    <>
+      {/* Messages Area DOAR */}
+      {messages.length === 0 ? (
+        <div className="text-center text-[#666] text-sm py-4">
+          {agentEnabled ? 'Start a conversation...' : 'Enable agent to chat'}
+        </div>
+      ) : (
+        messages.map((message) => (
+          <div
+            key={message.id}
+            className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} mb-2`}
+          >
             <div
-              key={message.id}
-              className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`max-w-[80%] p-2 rounded-lg text-sm ${
+                message.sender === 'user'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-[#2d2d2d] text-white border border-[#363636]'
+              }`}
             >
-              <div
-                className={`max-w-[80%] p-2 rounded-lg text-sm ${
-                  message.sender === 'user'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-[#2d2d2d] text-white border border-[#363636]'
-                }`}
-              >
-                <p className="text-xs">{message.content}</p>
-                <p className={`text-xs mt-1 opacity-70 ${
-                  message.sender === 'user' ? 'text-blue-100' : 'text-[#adadad]'
-                }`}>
-                  {formatTime(message.timestamp)}
-                </p>
-              </div>
-            </div>
-          ))
-        )}
-        
-        {/* Typing indicator */}
-        {isTyping && (
-          <div className="flex justify-start">
-            <div className="bg-[#2d2d2d] border border-[#363636] rounded-lg p-2 text-sm">
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-[#adadad] text-xs">Agent is typing...</span>
-              </div>
+              <p className="text-xs">{message.content}</p>
+              <p className={`text-xs mt-1 opacity-70 ${
+                message.sender === 'user' ? 'text-blue-100' : 'text-[#adadad]'
+              }`}>
+                {formatTime(message.timestamp)}
+              </p>
             </div>
           </div>
-        )}
-        
-        <div ref={messagesEndRef} />
-      </div>
+        ))
+      )}
+      
+      {/* Typing indicator */}
+      {isTyping && (
+        <div className="flex justify-start mb-2">
+          <div className="bg-[#2d2d2d] border border-[#363636] rounded-lg p-2 text-sm">
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span className="text-[#adadad] text-xs">Agent is typing...</span>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <div ref={messagesEndRef} />
 
-      {/* Input Area - fixed 50px */}
-      <div className="h-12 border-t border-[#363636] p-2 flex gap-2">
+      {/* Returnez și funcțiile pentru folosire în AgentDroplet */}
+      <div style={{ display: 'none' }}>
         <input
-          type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder={agentEnabled ? "Ask agent..." : "Enable agent to chat"}
-          disabled={!agentEnabled}
-          className="flex-1 bg-[#2d2d2d] border border-[#363636] rounded px-2 py-1 text-white text-sm placeholder-[#666] focus:outline-none focus:border-green-500 disabled:opacity-50"
+          ref={(el) => {
+            if (el) {
+              (window as any).agentChatHandlers = {
+                newMessage,
+                setNewMessage,
+                handleSendMessage,
+                handleKeyPress,
+                agentEnabled
+              }
+            }
+          }}
         />
-        <button
-          onClick={handleSendMessage}
-          disabled={!newMessage.trim() || !agentEnabled}
-          className="w-8 h-8 bg-green-500 hover:bg-green-600 disabled:bg-[#363636] disabled:cursor-not-allowed text-white rounded flex items-center justify-center transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-          </svg>
-        </button>
       </div>
-    </div>
+    </>
   )
 }

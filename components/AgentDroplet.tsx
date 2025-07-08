@@ -167,8 +167,8 @@ export default function AgentDroplet({ agentPopupOpen, setAgentPopupOpen }: Agen
             </button>
           </div>
 
-          {/* Chat Panel - flex-grow */}
-          <div className="flex-1 min-h-0">
+          {/* Chat Messages Only - flex-grow */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
             <AgentChatPanel agentEnabled={agentEnabled} />
           </div>
 
@@ -206,6 +206,31 @@ export default function AgentDroplet({ agentPopupOpen, setAgentPopupOpen }: Agen
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Input Area - între status și footer */}
+          <div className="h-12 border-t border-[#363636] p-2 flex gap-2">
+            <input
+              type="text"
+              placeholder={agentEnabled ? "Ask agent..." : "Enable agent to chat"}
+              disabled={!agentEnabled}
+              className="flex-1 bg-[#2d2d2d] border border-[#363636] rounded px-2 py-1 text-white text-sm placeholder-[#666] focus:outline-none focus:border-green-500 disabled:opacity-50"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
+                  // Simulez trimiterea mesajului
+                  console.log('Message sent:', (e.target as HTMLInputElement).value);
+                  (e.target as HTMLInputElement).value = '';
+                }
+              }}
+            />
+            <button
+              disabled={!agentEnabled}
+              className="w-8 h-8 bg-green-500 hover:bg-green-600 disabled:bg-[#363636] disabled:cursor-not-allowed text-white rounded flex items-center justify-center transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </button>
           </div>
 
           {/* Footer - 50px */}
