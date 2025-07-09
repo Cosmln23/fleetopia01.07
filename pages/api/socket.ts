@@ -4,6 +4,7 @@ import { auth } from '@clerk/nextjs/server'
 import { query } from '@/lib/db'
 
 const SocketHandler = async (req: NextApiRequest, res: NextApiResponse) => {
+  // @ts-ignore
   if (res.socket.server.io) {
     console.log('Socket is already running')
     res.end()
@@ -11,6 +12,7 @@ const SocketHandler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   console.log('Socket is initializing')
+  // @ts-ignore
   const io = new Server(res.socket.server, {
     path: '/api/socket',
     addTrailingSlash: false,
@@ -20,6 +22,7 @@ const SocketHandler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
   })
 
+  // @ts-ignore
   res.socket.server.io = io
 
   io.on('connection', async (socket) => {
