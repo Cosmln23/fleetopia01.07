@@ -15,18 +15,44 @@ Sentry.init({
   // Release version
   release: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0',
   
-  // Integrations
-  integrations: [
-    new Sentry.HttpIntegration({
-      tracing: true,
-    }),
-    new Sentry.OnUncaughtExceptionIntegration({
-      exitEvenIfOtherHandlersAreRegistered: false,
-    }),
-    new Sentry.OnUnhandledRejectionIntegration({
-      mode: 'warn',
-    }),
-  ],
+  // Integrations (default integrations are sufficient)
+  // integrations: [
+  //   new Sentry.HttpIntegration({
+  //     tracing: true,
+  //   }),
+  //   new Sentry.OnUncaughtExceptionIntegration({
+  //     exitEvenIfOtherHandlersAreRegistered: false,
+  //   }),
+  //   new Sentry.OnUnhandledRejectionIntegration({
+  //     mode: 'warn',
+  //   }),
+  // ],
   
   // Performance monitoring
-  beforeSend(event, hint) {\n    // Add server-side context\n    event.contexts = {\n      ...event.contexts,\n      server: {\n        name: 'fleetopia-api',\n        version: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0'\n      }\n    }\n    \n    // Filter sensitive data\n    if (event.request) {\n      delete event.request.headers?.authorization\n      delete event.request.headers?.cookie\n    }\n    \n    return event\n  },\n  \n  // Custom tags\n  initialScope: {\n    tags: {\n      component: 'server',\n      feature: 'fleetopia-api'\n    }\n  }\n})
+  beforeSend(event, hint) {
+    // Add server-side context
+    event.contexts = {
+      ...event.contexts,
+      server: {
+        name: 'fleetopia-api',
+        version: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0'
+      }
+    }
+    
+    // Filter sensitive data
+    if (event.request) {
+      delete event.request.headers?.authorization
+      delete event.request.headers?.cookie
+    }
+    
+    return event
+  },
+  
+  // Custom tags
+  initialScope: {
+    tags: {
+      component: 'server',
+      feature: 'fleetopia-api'
+    }
+  }
+})
