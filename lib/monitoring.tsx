@@ -21,7 +21,7 @@ export const withPerformanceMonitoring = <T extends any[], R,>(
           const duration = Date.now() - start
           
           span.setStatus({ code: 1, message: 'OK' })
-          span.setData('duration', duration)
+          span.setAttribute('duration', duration)
           
           logger.info(`${name} completed in ${duration}ms`)
           
@@ -30,9 +30,9 @@ export const withPerformanceMonitoring = <T extends any[], R,>(
           const duration = Date.now() - start
           
           span.setStatus({ code: 2, message: 'Error' })
-          span.setData('duration', duration)
+          span.setAttribute('duration', duration)
           if(error) {
-            span.setData('error', error)
+            span.setAttribute('error', String(error))
           }
           
           logger.error(`${name} failed after ${duration}ms`, error)
@@ -76,20 +76,26 @@ export const withErrorBoundary = <P extends object,>(
   fallback?: React.ComponentType<{ error: Error; resetError: () => void }>
 ) => {
   return Sentry.withErrorBoundary(Component, {
-    fallback: fallback || (({ error, resetError }) => (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 m-4">
-        <h2 className="text-red-800 font-bold mb-2">Something went wrong</h2>
-        <p className="text-red-600 mb-4">{error.message}</p>
-        <button 
-          onClick={resetError}
-          className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-        >
-          Try again
-        </button>
-      </div>
-    )),
+    fallback: (props) => {
+      const { error, resetError } = props as { error: Error; resetError: () => void };
+      if (fallback) {
+        return React.createElement(fallback, { error, resetError });
+      }
+      return (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 m-4">
+          <h2 className="text-red-800 font-bold mb-2">Something went wrong</h2>
+          <p className="text-red-600 mb-4">{error.message}</p>
+          <button
+            onClick={resetError}
+            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+          >
+            Try again
+          </button>
+        </div>
+      );
+    },
     showDialog: false,
-  })
+  });
 }
 
 // Custom metrics tracking
