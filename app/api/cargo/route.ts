@@ -149,36 +149,38 @@ export async function POST(req: NextRequest) {
     }
     
     const cargoData = validation.data
-    
+
+    const cd: any = cargoData
+
     // Create cargo in database
     const newCargoId = `cargo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     const timestamp = Date.now()
     
     const cargoToCreate = {
       id: newCargoId,
-      title: cargoData.title,
-      type: cargoData.cargoType,
-      urgency: cargoData.urgency,
-      weight: cargoData.weight,
-      volume: cargoData.volume,
-      from_addr: cargoData.fromAddress,
-      from_city: cargoData.fromCity,
-      from_postal: cargoData.fromPostal,
-      from_country: cargoData.fromCountry,
-      to_addr: cargoData.toAddress,
-      to_city: cargoData.toCity,
-      to_postal: cargoData.toPostal,
-      to_country: cargoData.toCountry,
-      from_lat: cargoData.fromLat,
-      from_lng: cargoData.fromLng,
-      to_lat: cargoData.toLat,
-      to_lng: cargoData.toLng,
-      load_date: cargoData.loadingDate,
-      delivery_date: cargoData.deliveryDate,
-      price: cargoData.price,
-      price_per_kg: cargoData.pricePerKg,
-      provider_name: cargoData.provider,
-      provider_status: cargoData.providerStatus || 'active',
+      title: cd.title,
+      type: cd.type,
+      urgency: cd.urgency,
+      weight: cd.weight,
+      volume: cd.volume,
+      from_addr: cd.fromAddress,
+      from_city: cd.fromCity,
+      from_postal: cd.fromPostal,
+      from_country: cd.fromCountry,
+      to_addr: cd.toAddress,
+      to_city: cd.toCity,
+      to_postal: cd.toPostal,
+      to_country: cd.toCountry,
+      from_lat: cd.fromLat ?? cd.pickupLat,
+      from_lng: cd.fromLng ?? cd.pickupLng,
+      to_lat: cd.toLat ?? cd.deliveryLat,
+      to_lng: cd.toLng ?? cd.deliveryLng,
+      load_date: cd.loadingDate,
+      delivery_date: cd.deliveryDate,
+      price: cd.price ?? cd.totalPrice ?? 0,
+      price_per_kg: cd.pricePerKg ?? 0,
+      provider_name: cd.providerName ?? cd.provider,
+      provider_status: cd.providerStatus || 'active',
       status: 'active',
       created_ts: timestamp,
       updated_ts: timestamp,
