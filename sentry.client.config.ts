@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/nextjs'
+import { replayIntegration } from '@sentry/react'
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -8,6 +9,11 @@ Sentry.init({
   
   // Capture 100% of the transactions, reduce in production
   profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+
+  // Capture 10% of all sessions,
+  // plus 100% of sessions with an error
+  replaysSessionSampleRate: 0.1,
+  replaysOnErrorSampleRate: 1.0,
   
   // Debug mode in development
   debug: process.env.NODE_ENV === 'development',
@@ -20,24 +26,14 @@ Sentry.init({
   
   // Integrations
   integrations: [
-    new Sentry.BrowserTracing({
-      // Set sampling rate for navigation and interactions
-      tracingOrigins: ['localhost', process.env.NEXT_PUBLIC_DOMAIN || 'fleetopia.co'],
-    }),
-    new Sentry.Replay({
-      // Capture 10% of all sessions,
-      // plus 100% of sessions with an error
-      sessionSampleRate: 0.1,
-      errorSampleRate: 1.0,
-    }),
+    replayIntegration(),
   ],
   
   // Performance monitoring
   beforeSend(event, hint) {
     // Filter out common noise
-    if (event.exception) {
-      const error = hint.originalException
-      if (error && error.name === 'ChunkLoadError') {
+    if (event.exception && hint.originalException instanceof Error) {
+      if (hint.originalException.name === 'ChunkLoadError') {
         return null
       }
     }
