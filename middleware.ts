@@ -1,6 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import { clerkClient } from '@clerk/nextjs/server'
 
 // Define protected routes that require authentication
 const isProtectedRoute = createRouteMatcher([
@@ -63,8 +62,9 @@ export default clerkMiddleware(async (auth, req) => {
   // Check trial status for authenticated users
   if (userId && !isOnboardingRoute(req)) {
     try {
-      const user = await clerkClient.users.getUser(userId)
-      const { createdAt, profileCompleted, trialStarted } = user.publicMetadata || {}
+      const { sessionClaims } = await auth()
+      const publicMetadata = sessionClaims?.publicMetadata || {}
+      const { createdAt, profileCompleted, trialStarted } = publicMetadata
       
       // If user has metadata and trial is active
       if (trialStarted && createdAt && !profileCompleted) {

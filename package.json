@@ -19,9 +19,12 @@
     "@googlemaps/js-api-loader": "^1.16.10",
     "@radix-ui/react-dialog": "^1.1.14",
     "@sentry/nextjs": "^9.35.0",
+    "@swc/core": "^1.7.0",
     "@tailwindcss/forms": "^0.5.10",
     "@tanstack/react-query": "^5.81.5",
+    "@types/google.maps": "^3.58.1",
     "@types/lodash.debounce": "^4.0.9",
+    "autoprefixer": "^10.4.21",
     "lodash.debounce": "^4.0.8",
     "next": "^14.2.30",
     "pg": "^8.16.3",
@@ -29,13 +32,11 @@
     "react-dom": "^18.3.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
+    "svix": "^1.69.0",
     "typescript": "^5.4.5",
     "winston": "^3.17.0",
     "zod": "^3.25.67",
-    "zustand": "^5.0.6",
-    "autoprefixer": "^10.4.21",
-    "@types/google.maps": "^3.58.1",
-    "@swc/core": "^1.7.0"
+    "zustand": "^5.0.6"
   },
   "devDependencies": {
     "@types/node": "^20.14.2",

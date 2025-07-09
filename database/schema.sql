@@ -73,6 +73,20 @@ CREATE TABLE IF NOT EXISTS users (
   deleted_at TIMESTAMP
 );
 
+-- Notifications table for user alerts and messages
+CREATE TABLE IF NOT EXISTS notifications (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  type TEXT NOT NULL, -- 'system', 'cargo', 'message', 'quote'
+  title TEXT NOT NULL,
+  content TEXT,
+  read_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  expires_at TIMESTAMP,
+  metadata JSONB
+);
+
 -- Fleet Management Tables
 CREATE TABLE IF NOT EXISTS vehicles (
   id TEXT PRIMARY KEY,
@@ -115,6 +129,10 @@ CREATE INDEX IF NOT EXISTS idx_users_profile_completed ON users(profile_complete
 CREATE INDEX IF NOT EXISTS idx_users_vat_number ON users(vat_number);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_read_at ON notifications(read_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
 CREATE INDEX IF NOT EXISTS idx_offer_status ON offer_requests(status);
 CREATE INDEX IF NOT EXISTS idx_vehicles_gps_device ON vehicles(gps_device_id);
 CREATE INDEX IF NOT EXISTS idx_gps_devices_assigned ON gps_devices(assigned);
