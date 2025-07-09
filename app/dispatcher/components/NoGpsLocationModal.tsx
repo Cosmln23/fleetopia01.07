@@ -1,11 +1,11 @@
+/// <reference types="google.maps" />
+
 'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import debounce from 'lodash.debounce'
 import { loadGoogle } from '@/lib/google'
-
-/// <reference types="google.maps" />
 
 // Fleetopia dark map styling
 const fleetopiaMapStyle = [
