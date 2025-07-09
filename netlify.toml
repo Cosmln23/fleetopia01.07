@@ -60,5 +60,5 @@
     Cache-Control = "public, max-age=31536000"
 
 # Function timeout
-[functions]
+[functions."*"]
   timeout = 30
