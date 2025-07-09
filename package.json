@@ -32,7 +32,8 @@
     "typescript": "^5.4.5",
     "winston": "^3.17.0",
     "zod": "^3.25.67",
-    "zustand": "^5.0.6"
+    "zustand": "^5.0.6",
+    "autoprefixer": "^10.4.21"
   },
   "devDependencies": {
     "@types/google.maps": "^3.58.1",
@@ -40,7 +41,6 @@
     "@types/pg": "^8.15.4",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "autoprefixer": "^10.4.21",
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.3",
     "postcss": "^8.4.38",
