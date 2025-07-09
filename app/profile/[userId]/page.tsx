@@ -7,6 +7,11 @@ import UserProfilePage from '@/components/UserProfile/UserProfilePage'
 export default function ProfilePage() {
   const params = useParams()
   const router = useRouter()
+
+  if (!params || !params.userId) {
+    return <div>Loading...</div>; // Sau un schelet de încărcare mai complex
+  }
+
   const userId = params.userId as string
 
   const profile = getUserProfile(userId)
