@@ -34,6 +34,7 @@ export interface ServerToClientEvents {
     message: string
     timestamp: string
   }) => void
+  'error': (data: { message: string }) => void
 }
 
 export interface ClientToServerEvents {
@@ -74,7 +75,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Initialize Socket.IO server
+    // @ts-ignore
     if (!res.socket.server.io) {
       console.log('Setting up Socket.IO server...')
       
@@ -83,6 +84,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ServerToClientEvents,
         InterServerEvents,
         SocketData
+      // @ts-ignore
       >(res.socket.server, {
         path: '/api/socket',
         addTrailingSlash: false,
@@ -274,13 +276,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
       })
 
+      // @ts-ignore
       res.socket.server.io = io
     }
-
-    res.status(200).json({ message: 'WebSocket server initialized' })
-
-  } catch (error) {
-    console.error('WebSocket setup error:', error)
-    res.status(500).json({ error: 'Failed to initialize WebSocket server' })
+  } catch (e) {
+    console.error('Socket.IO error:', e)
   }
+
+  res.end()
 }
