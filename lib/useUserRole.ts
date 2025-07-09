@@ -16,6 +16,13 @@ export function useUserRole() {
   const trialExpired = trialTimeElapsed > sevenDaysMs
   const daysLeft = createdAt ? Math.max(0, Math.ceil((sevenDaysMs - trialTimeElapsed) / (24 * 60 * 60 * 1000))) : 0
   
+  // Verification status logic
+  const verificationStatus = metadata.verification_status as 'unverified' | 'pending' | 'verified' || 'unverified'
+  const isVerified = verificationStatus === 'verified'
+  const isPending = verificationStatus === 'pending'
+  const canAccessAgent = isVerified || (!trialExpired && trialStarted)
+  const canSendQuotes = isVerified || (!trialExpired && trialStarted)
+  
   return {
     isLoaded,
     userId: user?.id,
@@ -27,6 +34,12 @@ export function useUserRole() {
     trialExpired,
     daysLeft,
     needsOnboarding: trialExpired && !profileCompleted,
+    // Verification status
+    verificationStatus,
+    isVerified,
+    isPending,
+    canAccessAgent,
+    canSendQuotes,
     // Additional metadata
     company: metadata.company as string,
     completedAt: metadata.completedAt as number,

@@ -68,6 +68,10 @@ CREATE TABLE IF NOT EXISTS users (
   is_online BOOLEAN DEFAULT FALSE,
   profile_completed BOOLEAN DEFAULT FALSE,
   trial_started BOOLEAN DEFAULT FALSE,
+  verification_status VARCHAR(20) DEFAULT 'unverified',
+  verification_documents JSONB,
+  verification_submitted_at TIMESTAMP,
+  verification_processed_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
   deleted_at TIMESTAMP
@@ -85,6 +89,21 @@ CREATE TABLE IF NOT EXISTS notifications (
   updated_at TIMESTAMP DEFAULT NOW(),
   expires_at TIMESTAMP,
   metadata JSONB
+);
+
+-- Verification requests table for document management
+CREATE TABLE IF NOT EXISTS verification_requests (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  documents_uploaded JSONB,
+  status VARCHAR(20) DEFAULT 'pending',
+  submitted_at TIMESTAMP DEFAULT NOW(),
+  processed_at TIMESTAMP,
+  processed_by TEXT,
+  rejection_reason TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  FOREIGN KEY (user_id) REFERENCES users(clerk_id)
 );
 
 -- Fleet Management Tables
@@ -133,6 +152,9 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_read_at ON notifications(read_at);
 CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type);
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
+CREATE INDEX IF NOT EXISTS idx_users_verification_status ON users(verification_status);
+CREATE INDEX IF NOT EXISTS idx_verification_requests_user_id ON verification_requests(user_id);
+CREATE INDEX IF NOT EXISTS idx_verification_requests_status ON verification_requests(status);
 CREATE INDEX IF NOT EXISTS idx_offer_status ON offer_requests(status);
 CREATE INDEX IF NOT EXISTS idx_vehicles_gps_device ON vehicles(gps_device_id);
 CREATE INDEX IF NOT EXISTS idx_gps_devices_assigned ON gps_devices(assigned);

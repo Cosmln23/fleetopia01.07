@@ -3,14 +3,15 @@
 import { useState } from 'react'
 import { useUserRole } from '@/lib/useUserRole'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 export default function TrialBanner() {
-  const { isLoaded, trialStarted, profileCompleted, daysLeft, trialExpired } = useUserRole()
+  const { isLoaded, trialStarted, profileCompleted, daysLeft, trialExpired, isVerified, isPending } = useUserRole()
   const [dismissed, setDismissed] = useState(false)
   const router = useRouter()
 
-  // Don't show if not loaded, no trial started, profile already completed, or dismissed
-  if (!isLoaded || !trialStarted || profileCompleted || dismissed) {
+  // Don't show if not loaded, no trial started, or dismissed
+  if (!isLoaded || !trialStarted || dismissed) {
     return null
   }
 
@@ -19,7 +20,83 @@ export default function TrialBanner() {
     return null
   }
 
-  // Only show when 2 days or less remaining
+  // Show verification prompt if profile completed but not verified
+  if (profileCompleted && !isVerified && !isPending) {
+    return (
+      <div className="bg-blue-600/20 border border-blue-600/30 rounded-lg p-4 mb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0">
+              <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p className="text-blue-400 font-medium">Get verified for full access!</p>
+              <p className="text-[#adadad] text-sm mt-1">
+                Upload verification documents to access Agent AI and send quotes.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Link
+              href="/settings/verification"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              Get Verified
+            </Link>
+            <button
+              onClick={() => setDismissed(true)}
+              className="text-[#adadad] hover:text-white transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show pending verification status
+  if (isPending) {
+    return (
+      <div className="bg-orange-600/20 border border-orange-600/30 rounded-lg p-4 mb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0">
+              <svg className="w-5 h-5 text-orange-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p className="text-orange-400 font-medium">Verification in progress</p>
+              <p className="text-[#adadad] text-sm mt-1">
+                Your documents are being reviewed. You maintain extended access during this period.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setDismissed(true)}
+            className="text-[#adadad] hover:text-white transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't show profile completion banner if already completed
+  if (profileCompleted) {
+    return null
+  }
+
+  // Only show when 2 days or less remaining for profile completion
   if (daysLeft > 2) {
     return null
   }
