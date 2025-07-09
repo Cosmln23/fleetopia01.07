@@ -33,7 +33,7 @@ export default function ChatPanel({ cargoId, onQuoteSent, suggestedPrice }: Chat
     negotiationStatus,
     sendQuote: wsSendQuote,
     sendChatMessage: wsSendChatMessage,
-    handleNegotiationAction,
+    handleNegotiationAction: wsHandleNegotiationAction,
     error: wsError
   } = useWebSocket(cargoId)
   
