@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useStickyNavigation } from '@/contexts/StickyNavigationContext'
 import QueryProvider from '@/contexts/QueryProvider'
 import FullNavigationBar from '@/components/FullNavigationBar'
@@ -11,15 +11,34 @@ import { UserButton } from '@clerk/nextjs'
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const { isModalOpen } = useStickyNavigation()
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0)
   
-  const unreadNotificationsCount = getUnreadNotificationsCount()
+  // Fetch unread notifications count
+  useEffect(() => {
+    const fetchNotificationsCount = async () => {
+      try {
+        const count = await getUnreadNotificationsCount()
+        setUnreadNotificationsCount(count)
+      } catch (error) {
+        console.error('Error fetching notifications count:', error)
+        setUnreadNotificationsCount(0)
+      }
+    }
+    
+    fetchNotificationsCount()
+    
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchNotificationsCount, 30000)
+    
+    return () => clearInterval(interval)
+  }, [])
   
   return (
     <>
       <div className="relative flex size-full min-h-screen flex-col bg-[#1a1a1a] dark group/design-root overflow-x-hidden" style={{fontFamily: '"Space Grotesk", "Noto Sans", sans-serif'}}>
         <div className="layout-container flex h-full grow flex-col">
           {/* HEADER STICKY */}
-          <header className="fixed top-0 left-0 right-0 w-full z-[1000] flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#363636] px-10 py-3 bg-[#1a1a1a]">
+          <header className="fixed top-0 left-0 right-0 w-full z-[1000] flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#363636] px-10 py-3 bg-[#1a1a1a]" style={{ display: 'flex', visibility: 'visible' }}>
             <div className="flex items-center gap-4 text-white">
               <div className="w-6 h-6 flex items-center justify-center">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -30,11 +49,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               <h2 className="text-white text-lg font-bold leading-tight tracking-[-0.015em]">Fleetopia</h2>
             </div>
             <div className="flex flex-1 justify-end gap-8">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4" style={{ display: 'flex', visibility: 'visible' }}>
                 {/* Notifications Icon */}
                 <button
                   onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
                   className="relative text-[#adadad] hover:text-white transition-colors"
+                  style={{ display: 'block', visibility: 'visible' }}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
                     <path d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216ZM48,184c7.7-13.24,16-43.92,16-80a64,64,0,1,1,128,0c0,36.05,8.28,66.73,16,80Z"></path>
@@ -47,15 +67,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 </button>
 
                 {/* User Button */}
-                <UserButton 
-                  appearance={{
-                    elements: {
-                      avatarBox: "w-8 h-8",
-                      userButtonPopoverCard: "bg-[#1a1a1a] border border-[#363636]",
-                      userButtonPopoverText: "text-white"
-                    }
-                  }}
-                />
+                <div style={{ display: 'block', visibility: 'visible' }}>
+                  <UserButton 
+                    appearance={{
+                      elements: {
+                        avatarBox: "w-8 h-8",
+                        userButtonPopoverCard: "bg-[#1a1a1a] border border-[#363636]",
+                        userButtonPopoverText: "text-white"
+                      }
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </header>

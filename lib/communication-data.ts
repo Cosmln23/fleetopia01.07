@@ -4,11 +4,18 @@ import { User, UserChatMessage, SystemAlert, ChatConversation } from './types'
 export const getUnreadMessagesCount = async (): Promise<number> => {
   try {
     const response = await fetch('/api/messages/unread-count')
-    if (!response.ok) return 0
+    if (!response.ok) {
+      // Fallback to 0 if API endpoint doesn't exist yet
+      if (response.status === 404) {
+        return 0
+      }
+      return 0
+    }
     const data = await response.json()
     return data.count || 0
   } catch (error) {
-    console.error('Error fetching unread messages count:', error)
+    // Fallback for any network or API errors
+    console.warn('Messages API not available, using fallback:', error.message)
     return 0
   }
 }
@@ -16,11 +23,18 @@ export const getUnreadMessagesCount = async (): Promise<number> => {
 export const getUnreadNotificationsCount = async (): Promise<number> => {
   try {
     const response = await fetch('/api/notifications/unread-count')
-    if (!response.ok) return 0
+    if (!response.ok) {
+      // Fallback to 0 if API endpoint doesn't exist yet
+      if (response.status === 404) {
+        return 0
+      }
+      return 0
+    }
     const data = await response.json()
     return data.count || 0
   } catch (error) {
-    console.error('Error fetching unread notifications count:', error)
+    // Fallback for any network or API errors
+    console.warn('Notifications API not available, using fallback:', error.message)
     return 0
   }
 }
@@ -104,6 +118,17 @@ export const markNotificationAsRead = async (notificationId: string): Promise<bo
     console.error('Error marking notification as read:', error)
     return false
   }
+}
+
+// Synchronous fallback functions for backward compatibility
+export const getUnreadNotificationsCountSync = (): number => {
+  // Fallback to 0 for synchronous calls
+  return 0
+}
+
+export const getUnreadMessagesCountSync = (): number => {
+  // Fallback to 0 for synchronous calls
+  return 0
 }
 
 // Deprecated - keeping for backward compatibility

@@ -42,6 +42,10 @@ export default clerkMiddleware(async (auth, req) => {
   // Protect routes that require authentication
   if (isProtectedRoute(req)) {
     if (!userId) {
+      // Only redirect if it's not an API route
+      if (req.nextUrl.pathname.startsWith('/api/')) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
       return NextResponse.redirect(new URL('/sign-in', req.url))
     }
   }
