@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server'
 import { healthCheck } from '@/lib/monitoring'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     const health = await healthCheck()
