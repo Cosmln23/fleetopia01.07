@@ -15,7 +15,11 @@ export const getUnreadMessagesCount = async (): Promise<number> => {
     return data.count || 0
   } catch (error) {
     // Fallback for any network or API errors
-    console.warn('Messages API not available, using fallback:', error.message)
+    if (error instanceof Error) {
+      console.warn('Messages API not available, using fallback:', error.message)
+    } else {
+      console.warn('Messages API not available, using fallback with unknown error.')
+    }
     return 0
   }
 }
@@ -34,7 +38,11 @@ export const getUnreadNotificationsCount = async (): Promise<number> => {
     return data.count || 0
   } catch (error) {
     // Fallback for any network or API errors
-    console.warn('Notifications API not available, using fallback:', error.message)
+    if (error instanceof Error) {
+      console.warn('Notifications API not available, using fallback:', error.message)
+    } else {
+      console.warn('Notifications API not available, using fallback with unknown error.')
+    }
     return 0
   }
 }
