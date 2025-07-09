@@ -46,18 +46,31 @@ CREATE TABLE IF NOT EXISTS offer_requests (
   FOREIGN KEY (cargo_id) REFERENCES cargo(id) ON DELETE CASCADE
 );
 
--- Users table for basic user management
+-- Users table for basic user management and onboarding
 CREATE TABLE IF NOT EXISTS users (
-  id TEXT PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
+  clerk_id TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
-  role TEXT NOT NULL, -- CARGO_OWNER | TRANSPORTER
+  phone TEXT,
+  company TEXT,
+  vat_number TEXT,
+  role TEXT, -- provider | carrier
+  industry TEXT,
+  address TEXT,
+  city TEXT,
+  country TEXT DEFAULT 'Romania',
+  vehicle_count INTEGER,
   rating REAL DEFAULT 0,
   verified BOOLEAN DEFAULT FALSE,
   avatar TEXT,
   last_seen BIGINT,
   is_online BOOLEAN DEFAULT FALSE,
-  created_ts BIGINT NOT NULL
+  profile_completed BOOLEAN DEFAULT FALSE,
+  trial_started BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  deleted_at TIMESTAMP
 );
 
 -- Fleet Management Tables
@@ -97,6 +110,11 @@ CREATE INDEX IF NOT EXISTS idx_cargo_type ON cargo(type);
 CREATE INDEX IF NOT EXISTS idx_cargo_urgency ON cargo(urgency);
 CREATE INDEX IF NOT EXISTS idx_cargo_price ON cargo(price);
 CREATE INDEX IF NOT EXISTS idx_offer_cargo ON offer_requests(cargo_id);
+CREATE INDEX IF NOT EXISTS idx_users_clerk_id ON users(clerk_id);
+CREATE INDEX IF NOT EXISTS idx_users_profile_completed ON users(profile_completed);
+CREATE INDEX IF NOT EXISTS idx_users_vat_number ON users(vat_number);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);
 CREATE INDEX IF NOT EXISTS idx_offer_status ON offer_requests(status);
 CREATE INDEX IF NOT EXISTS idx_vehicles_gps_device ON vehicles(gps_device_id);
 CREATE INDEX IF NOT EXISTS idx_gps_devices_assigned ON gps_devices(assigned);

@@ -5,6 +5,7 @@ import { useStickyNavigation } from '@/contexts/StickyNavigationContext'
 import QueryProvider from '@/contexts/QueryProvider'
 import FullNavigationBar from '@/components/FullNavigationBar'
 import NotificationsDropdown from '@/components/NotificationsDropdown'
+import TrialBanner from '@/components/TrialBanner'
 import { getUnreadNotificationsCount } from '@/lib/communication-data'
 import { UserButton } from '@clerk/nextjs'
 
@@ -86,6 +87,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           <div className={`px-40 flex flex-1 justify-center py-5 ${isModalOpen ? 'pt-5 pb-5' : 'pt-[120px] pb-[180px]'}`}>
             <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
               <QueryProvider>
+                <TrialBanner />
                 {children}
               </QueryProvider>
             </div>

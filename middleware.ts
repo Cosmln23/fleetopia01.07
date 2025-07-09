@@ -1,5 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
+import { clerkClient } from '@clerk/nextjs/server'
 
 // Define protected routes that require authentication
 const isProtectedRoute = createRouteMatcher([
@@ -14,6 +15,15 @@ const isProtectedRoute = createRouteMatcher([
   '/api/messages(.*)',
   '/api/notifications(.*)',
   '/api/stats(.*)'
+])
+
+// Routes that should be accessible during onboarding
+const isOnboardingRoute = createRouteMatcher([
+  '/onboarding(.*)',
+  '/sign-in(.*)',
+  '/sign-up(.*)',
+  '/api/webhooks(.*)',
+  '/api/users/profile(.*)'
 ])
 
 export default clerkMiddleware(async (auth, req) => {
@@ -47,6 +57,30 @@ export default clerkMiddleware(async (auth, req) => {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
       return NextResponse.redirect(new URL('/sign-in', req.url))
+    }
+  }
+
+  // Check trial status for authenticated users
+  if (userId && !isOnboardingRoute(req)) {
+    try {
+      const user = await clerkClient.users.getUser(userId)
+      const { createdAt, profileCompleted, trialStarted } = user.publicMetadata || {}
+      
+      // If user has metadata and trial is active
+      if (trialStarted && createdAt && !profileCompleted) {
+        const now = Date.now()
+        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
+        const trialExpired = (now - Number(createdAt)) > sevenDaysMs
+        
+        // If trial expired and profile not completed, force onboarding
+        if (trialExpired && !req.nextUrl.pathname.startsWith('/onboarding')) {
+          console.log('🔄 Trial expired, redirecting to onboarding:', userId)
+          return NextResponse.redirect(new URL('/onboarding', req.url))
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error checking trial status:', error)
+      // Don't block the request on error - just log it
     }
   }
   
