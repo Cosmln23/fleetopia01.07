@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { mockChatConversations, getMessagesByConversation } from '@/lib/communication-data'
-import { ChatConversation } from '@/lib/types'
+import { ChatConversation, UserChatMessage } from '@/lib/types'
 
 interface UserChatProps {
   isOpen: boolean
@@ -13,6 +13,15 @@ export default function UserChat({ isOpen, onClose }: UserChatProps) {
   const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null)
   const [conversations, setConversations] = useState(mockChatConversations)
   const [newMessage, setNewMessage] = useState('')
+  const [messages, setMessages] = useState<UserChatMessage[]>([])
+
+  useEffect(() => {
+    if (selectedConversation) {
+      getMessagesByConversation(selectedConversation.id).then(setMessages)
+    } else {
+      setMessages([])
+    }
+  }, [selectedConversation])
 
   if (!isOpen) return null
 
@@ -108,7 +117,7 @@ export default function UserChat({ isOpen, onClose }: UserChatProps) {
             </div>
             <div className="flex-1 p-4 overflow-y-auto">
               <div className="space-y-3">
-                {getMessagesByConversation(selectedConversation.id).map((message) => {
+                {messages.map((message) => {
                   const isCurrentUser = message.sender.id === currentUserId
                   return (
                     <div key={message.id} className={`flex gap-3 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
