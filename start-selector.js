@@ -1,10 +1,27 @@
 // Start selector - determines whether to run cron jobs or Next.js server
 const { spawn } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 
-const isCronMode = process.env.CRON_MODE === 'true';
+// Auto-detect if this should run as cron or web server
+const isCronMode = process.env.CRON_MODE === 'true' || 
+                  process.env.RAILWAY_CRON === 'true' ||
+                  process.env.IS_CRON === 'true' ||
+                  // Auto-detect: if no .next directory exists, assume cron mode
+                  !fs.existsSync(path.join(__dirname, '.next')) ||
+                  // Auto-detect: if environment suggests cron job
+                  process.env.NODE_ENV === 'cron' ||
+                  process.argv.includes('--cron');
+
+console.log(`🔍 Environment detection:
+  CRON_MODE: ${process.env.CRON_MODE}
+  RAILWAY_CRON: ${process.env.RAILWAY_CRON}
+  .next exists: ${fs.existsSync(path.join(__dirname, '.next'))}
+  NODE_ENV: ${process.env.NODE_ENV}
+  Detected mode: ${isCronMode ? 'CRON' : 'WEB'}`);
 
 if (isCronMode) {
-  console.log('🕐 CRON_MODE detected - running cron jobs');
+  console.log('🕐 CRON MODE detected - running cron jobs');
   // Run cron script
   const cronProcess = spawn('node', ['run-cron.js'], { stdio: 'inherit' });
   
@@ -14,7 +31,7 @@ if (isCronMode) {
   });
   
 } else {
-  console.log('🚀 Starting Next.js production server');
+  console.log('🚀 WEB MODE detected - starting Next.js production server');
   // Use pnpm to start Next.js (most reliable)
   const nextProcess = spawn('pnpm', ['start:next'], { stdio: 'inherit', shell: true });
   
