@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
     const total = parseInt(countResult.rows[0].total)
 
     return NextResponse.json({
-      requests: result.rows.map(row => ({
+      requests: result.rows.map((row: any) => ({
         id: row.id,
         userId: row.user_id,
         userName: row.user_name,
@@ -136,7 +136,8 @@ export async function POST(req: NextRequest) {
     `, [userVerificationStatus, request.user_id])
 
     try {
-      await clerkClient.users.updateUserMetadata(request.user_id, {
+      const clerk = await clerkClient();
+      await clerk.users.updateUserMetadata(request.user_id, {
         publicMetadata: {
           verification_status: userVerificationStatus,
           verification_processed_at: new Date().toISOString()
