@@ -65,7 +65,7 @@ export default clerkMiddleware(async (auth, req) => {
   if (userId && !isOnboardingRoute(req)) {
     try {
       const { sessionClaims } = await auth()
-      const publicMetadata = sessionClaims?.publicMetadata || {}
+      const publicMetadata = sessionClaims?.publicMetadata as any || {}
       const { status, trialExpiresAt, profileCompleted, verification_status } = publicMetadata
       
       // Check if user has an expired trial
@@ -98,7 +98,7 @@ export default clerkMiddleware(async (auth, req) => {
       
       // Legacy check for old trial system (can be removed after migration)
       if (!status && !profileCompleted) {
-        const { createdAt, trialStarted } = publicMetadata
+        const { createdAt, trialStarted } = publicMetadata as any
         if (trialStarted && createdAt) {
           const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
           const trialExpired = (now - Number(createdAt)) > sevenDaysMs

@@ -72,14 +72,8 @@ export async function POST(req: NextRequest) {
       WHERE clerk_id = $2
     `, ['pending', userId])
 
-    // Update Clerk metadata
-    await req.user?.update({
-      publicMetadata: {
-        ...req.user.publicMetadata,
-        verification_status: 'pending',
-        verification_submitted_at: Date.now()
-      }
-    })
+    // Update Clerk metadata - this will be handled by the admin approval system
+    // No direct user metadata update needed here
 
     // TODO: Send notification to admin (Slack/email)
     console.log('🔔 New verification request submitted:', {

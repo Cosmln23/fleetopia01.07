@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
     `, [userVerificationStatus, request.user_id])
 
     try {
-      const clerk = clerkClient();
+      const clerk = await clerkClient();
       await clerk.users.updateUserMetadata(request.user_id, {
         publicMetadata: {
           verification_status: userVerificationStatus,

@@ -59,7 +59,8 @@ export async function POST(req: NextRequest) {
         trialExpiresAt.setDate(trialExpiresAt.getDate() + 7)
 
         // Set initial metadata in Clerk
-        await clerkClient.users.updateUserMetadata(userId, {
+        const clerk = await clerkClient();
+        await clerk.users.updateUserMetadata(userId, {
           publicMetadata: {
             createdAt: Date.now(),
             profileCompleted: false,

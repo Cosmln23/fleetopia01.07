@@ -65,8 +65,8 @@ export default function OnboardingPage() {
 
       // Update Clerk metadata
       await user?.update({
-        publicMetadata: {
-          ...user.publicMetadata,
+        unsafeMetadata: {
+          ...user.unsafeMetadata,
           profileCompleted: true,
           role: formData.role,
           company: formData.company,
