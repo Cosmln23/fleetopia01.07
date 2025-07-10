@@ -3,6 +3,9 @@ import { auth } from '@clerk/nextjs/server'
 import { query } from '@/lib/db'
 import { z } from 'zod'
 
+// Force dynamic rendering for this API route
+export const dynamic = 'force-dynamic'
+
 // Validation schema for user profile
 const userProfileSchema = z.object({
   fullName: z.string().min(2, 'Numele trebuie să conțină minim 2 caractere'),

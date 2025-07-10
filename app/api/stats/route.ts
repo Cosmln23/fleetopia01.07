@@ -5,6 +5,9 @@ import { query } from '@/lib/db'
 import { withApiMonitoring, trackMetric } from '@/lib/monitoring'
 import logger from '@/lib/logger'
 
+// Force dynamic rendering for this API route
+export const dynamic = 'force-dynamic'
+
 export const GET = withApiMonitoring('stats', async (req: NextRequest) => {
   try {
     const { userId } = await auth()
