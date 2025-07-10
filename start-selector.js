@@ -32,13 +32,13 @@ if (isCronMode) {
   
 } else {
   console.log('🚀 WEB MODE detected - starting Next.js production server');
-  // Use pnpm to start Next.js (most reliable)
-  const nextProcess = spawn('pnpm', ['start:next'], { stdio: 'inherit', shell: true });
+  // Use npm instead of pnpm for production compatibility
+  const nextProcess = spawn('npm', ['run', 'start:next'], { stdio: 'inherit', shell: true });
   
   nextProcess.on('error', (err) => {
-    console.error('❌ Failed to start with pnpm, trying npm:', err.message);
-    // Fallback to npm
-    const fallbackProcess = spawn('npm', ['run', 'start:next'], { stdio: 'inherit', shell: true });
+    console.error('❌ Failed to start with npm, trying direct next command:', err.message);
+    // Fallback to direct next command
+    const fallbackProcess = spawn('npx', ['next', 'start', '-p', '3000'], { stdio: 'inherit', shell: true });
     fallbackProcess.on('exit', (code) => {
       process.exit(code);
     });
