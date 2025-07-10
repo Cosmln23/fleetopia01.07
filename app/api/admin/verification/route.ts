@@ -1,28 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { auth, clerkClient } from '@clerk/nextjs/server'
 import { query } from '@/lib/db'
-import { clerkClient } from '@clerk/nextjs/server'
 
-// Admin-only endpoint - check admin role
-async function checkAdminRole(req: NextRequest) {
-  const { userId, sessionClaims } = await auth()
-  
+async function checkAdminRole() {
+  const { userId, orgRole } = await auth()
+
   if (!userId) {
-    return { error: 'Unauthorized', status: 401 }
+    return { error: 'Unauthorized', status: 401, authed: false }
   }
 
-  const role = sessionClaims?.publicMetadata?.role
-  if (role !== 'admin') {
-    return { error: 'Forbidden - Admin access required', status: 403 }
+  if (orgRole !== 'admin') {
+    return { error: 'Forbidden - Admin access required', status: 403, authed: false }
   }
 
-  return { userId, role }
+  return { userId, authed: true }
 }
 
 export async function GET(req: NextRequest) {
   try {
-    const adminCheck = await checkAdminRole(req)
-    if (adminCheck.error) {
+    const adminCheck = await checkAdminRole()
+    if (!adminCheck.authed) {
       return NextResponse.json({ error: adminCheck.error }, { status: adminCheck.status })
     }
 
@@ -31,7 +28,6 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
 
-    // Get verification requests with user info
     const result = await query(`
       SELECT 
         vr.*,
@@ -46,7 +42,6 @@ export async function GET(req: NextRequest) {
       LIMIT $2 OFFSET $3
     `, [status, limit, offset])
 
-    // Get total count
     const countResult = await query(
       'SELECT COUNT(*) as total FROM verification_requests WHERE status = $1',
       [status]
@@ -87,8 +82,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const adminCheck = await checkAdminRole(req)
-    if (adminCheck.error) {
+    const adminCheck = await checkAdminRole()
+    if (!adminCheck.authed) {
       return NextResponse.json({ error: adminCheck.error }, { status: adminCheck.status })
     }
 
@@ -106,7 +101,6 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
 
-    // Get the verification request
     const requestResult = await query(
       'SELECT * FROM verification_requests WHERE id = $1',
       [requestId]
@@ -129,34 +123,30 @@ export async function POST(req: NextRequest) {
     const newStatus = action === 'approve' ? 'approved' : 'rejected'
     const userVerificationStatus = action === 'approve' ? 'verified' : 'unverified'
 
-    // Update verification request
     await query(`
       UPDATE verification_requests 
       SET status = $1, processed_at = NOW(), processed_by = $2, rejection_reason = $3, updated_at = NOW()
       WHERE id = $4
     `, [newStatus, adminCheck.userId, rejectionReason || null, requestId])
 
-    // Update user status
     await query(`
       UPDATE users 
       SET verification_status = $1, verification_processed_at = NOW(), updated_at = NOW()
       WHERE clerk_id = $2
     `, [userVerificationStatus, request.user_id])
 
-    // Update Clerk metadata
     try {
-      await clerkClient.users.updateUserMetadata(request.user_id, {
+      const clerk = clerkClient();
+      await clerk.users.updateUserMetadata(request.user_id, {
         publicMetadata: {
           verification_status: userVerificationStatus,
-          verification_processed_at: Date.now()
+          verification_processed_at: new Date().toISOString()
         }
       })
     } catch (clerkError) {
       console.error('⚠️ Error updating Clerk metadata:', clerkError)
-      // Don't fail the request if Clerk update fails
     }
 
-    // TODO: Send notification email to user
     console.log(`✅ Verification request ${action}ed:`, {
       requestId,
       userId: request.user_id,
