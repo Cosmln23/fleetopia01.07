@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { cargoDb } from '@/lib/db'
+import { getCargoDetails, getCargoOffers, updateCargoStatus } from '@/lib/marketplace'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -10,13 +10,18 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
 
     const cargoId = params.id
-    const cargo = await cargoDb.getById(cargoId)
+    
+    // Get cargo details using marketplace service
+    const cargo = await getCargoDetails(cargoId)
 
     if (!cargo) {
       return NextResponse.json({ error: 'Cargo not found' }, { status: 404 })
     }
 
-    // Transform database result to match expected format
+    // Get offers for this cargo
+    const offers = await getCargoOffers(cargoId)
+
+    // Transform to maintain backward compatibility
     const transformedCargo = {
       id: cargo.id,
       title: cargo.title,
@@ -46,32 +51,29 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       postingDate: cargo.posting_date,
       createdAt: cargo.created_ts,
       updatedAt: cargo.updated_ts,
-      // Sender information
-      sender: {
-        id: cargo.sender_id,
-        name: cargo.sender_name,
-        email: cargo.sender_email,
-        rating: cargo.sender_rating,
-        verified: cargo.sender_verified,
-        avatar: cargo.sender_avatar,
-        company: cargo.sender_company,
-        location: cargo.sender_location,
-        lastSeen: cargo.sender_last_seen,
-        isOnline: cargo.sender_is_online
-      }
+      offers: offers.map(offer => ({
+        id: offer.id,
+        transporterId: offer.transporter_id,
+        transporterName: offer.transporter_name,
+        transporterCompany: offer.transporter_company,
+        proposedPrice: offer.proposed_price,
+        message: offer.message,
+        status: offer.status,
+        createdAt: offer.created_ts
+      }))
     }
 
     return NextResponse.json({
       cargo: transformedCargo,
       _meta: {
         timestamp: new Date().toISOString(),
-        source: 'live_database',
+        source: process.env.USE_MOCK_MARKETPLACE === 'true' ? 'mock_data' : 'live_database',
         userId: userId
       }
     })
 
   } catch (error) {
-    console.error('Error fetching cargo by ID:', error)
+    console.error('❌ API: GET /api/cargo/[id] error:', error)
     return NextResponse.json({ error: 'Failed to fetch cargo' }, { status: 500 })
   }
 }
@@ -86,25 +88,61 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const cargoId = params.id
     const body = await req.json()
 
-    // Check if user owns this cargo or is admin
-    const cargo = await cargoDb.getById(cargoId)
+    // Check if cargo exists
+    const cargo = await getCargoDetails(cargoId)
     if (!cargo) {
       return NextResponse.json({ error: 'Cargo not found' }, { status: 404 })
     }
 
-    const role = (sessionClaims?.publicMetadata as any)?.role
-    if (cargo.sender_id !== userId && role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden - Can only update own cargo' }, { status: 403 })
-    }
-
-    // Update cargo status
+    // Only allow status updates for now
     if (body.status) {
-      const updatedCargo = await cargoDb.updateStatus(cargoId, body.status)
+      const validStatuses = ['NEW', 'OPEN', 'TAKEN', 'IN_PROGRESS', 'COMPLETED']
+      if (!validStatuses.includes(body.status)) {
+        return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
+      }
+      
+      const success = await updateCargoStatus(cargoId, body.status)
+      if (!success) {
+        return NextResponse.json({ error: 'Failed to update cargo status' }, { status: 500 })
+      }
+      
+      // Get updated cargo details
+      const updatedCargo = await getCargoDetails(cargoId)
+      
       return NextResponse.json({
-        cargo: updatedCargo,
+        cargo: {
+          id: updatedCargo!.id,
+          title: updatedCargo!.title,
+          weight: updatedCargo!.weight,
+          volume: updatedCargo!.volume,
+          cargoType: updatedCargo!.type,
+          urgency: updatedCargo!.urgency,
+          fromAddress: updatedCargo!.from_addr,
+          fromCity: updatedCargo!.from_city || '',
+          fromPostal: updatedCargo!.from_postal || '',
+          fromCountry: updatedCargo!.from_country,
+          toAddress: updatedCargo!.to_addr,
+          toCity: updatedCargo!.to_city || '',
+          toPostal: updatedCargo!.to_postal || '',
+          toCountry: updatedCargo!.to_country,
+          fromLat: updatedCargo!.from_lat,
+          fromLng: updatedCargo!.from_lng,
+          toLat: updatedCargo!.to_lat,
+          toLng: updatedCargo!.to_lng,
+          loadingDate: updatedCargo!.load_date,
+          deliveryDate: updatedCargo!.delivery_date,
+          price: updatedCargo!.price,
+          pricePerKg: updatedCargo!.price_per_kg,
+          provider: updatedCargo!.provider_name,
+          providerStatus: updatedCargo!.provider_status,
+          status: updatedCargo!.status,
+          postingDate: updatedCargo!.posting_date,
+          createdAt: updatedCargo!.created_ts,
+          updatedAt: updatedCargo!.updated_ts
+        },
         _meta: {
           timestamp: new Date().toISOString(),
-          source: 'live_database',
+          source: process.env.USE_MOCK_MARKETPLACE === 'true' ? 'mock_data' : 'live_database',
           userId: userId,
           action: 'status_update'
         }
@@ -114,7 +152,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: 'No valid updates provided' }, { status: 400 })
 
   } catch (error) {
-    console.error('Error updating cargo:', error)
+    console.error('❌ API: PATCH /api/cargo/[id] error:', error)
     return NextResponse.json({ error: 'Failed to update cargo' }, { status: 500 })
   }
 }

@@ -61,29 +61,41 @@ export default clerkMiddleware(async (auth, req) => {
     }
   }
 
-  // Check trial status for authenticated users
+  // Check trial status for authenticated users (14-day trial)
   if (userId && !isOnboardingRoute(req)) {
     try {
       const { sessionClaims } = await auth()
       const publicMetadata = sessionClaims?.publicMetadata as any || {}
-      const { status, trialExpiresAt, profileCompleted, verification_status } = publicMetadata
+      const { status, trialStartedAt, profileCompleted, verification_status } = publicMetadata
       
-      // Check if user has an expired trial
+      // Check if user has an expired trial (14 days)
       const now = Date.now()
-      const isTrialExpired = trialExpiresAt && now > Number(trialExpiresAt)
       const isTrialUser = status === 'TRIAL'
       const isVerified = verification_status === 'verified'
       
+      // Calculate trial expiry for 14-day trial
+      let isTrialExpired = false
+      let daysRemaining = 0
+      
+      if (isTrialUser && trialStartedAt) {
+        const trialStartTime = Number(trialStartedAt)
+        const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000
+        const elapsedTime = now - trialStartTime
+        isTrialExpired = elapsedTime > fourteenDaysMs
+        daysRemaining = Math.max(0, Math.ceil((fourteenDaysMs - elapsedTime) / (24 * 60 * 60 * 1000)))
+      }
+      
       // If trial expired and not verified, redirect based on route type
       if (isTrialUser && isTrialExpired && !isVerified) {
-        console.log('🔄 Trial expired, user needs upgrade:', { userId, status, isTrialExpired })
+        console.log('🔄 Trial expired, user needs upgrade:', { userId, status, isTrialExpired, daysRemaining })
         
         // For API routes, return 402 Payment Required
         if (req.nextUrl.pathname.startsWith('/api/')) {
           return NextResponse.json(
             { 
               error: 'Trial expired', 
-              message: 'Your 7-day trial has expired. Please upgrade to continue.',
+              message: 'Your 14-day trial has expired. Please upgrade to continue.',
+              daysRemaining: 0,
               redirectTo: '/billing'
             }, 
             { status: 402 }
@@ -94,6 +106,12 @@ export default clerkMiddleware(async (auth, req) => {
         if (!req.nextUrl.pathname.startsWith('/billing')) {
           return NextResponse.redirect(new URL('/billing', req.url))
         }
+      }
+      
+      // Add trial info to headers for components to use
+      if (isTrialUser && !isTrialExpired) {
+        requestHeaders.set('x-trial-days-remaining', daysRemaining.toString())
+        requestHeaders.set('x-trial-status', 'active')
       }
       
       // Legacy check for old trial system (can be removed after migration)

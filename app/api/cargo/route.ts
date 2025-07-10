@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { cargoCreateSchema } from '@/lib/zodSchemas'
-import { cargoDb } from '@/lib/db'
+import { listCargo, createCargo, type CargoFilters, type PaginationParams } from '@/lib/marketplace'
+import { query } from '@/lib/db'
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,32 +12,71 @@ export async function GET(req: NextRequest) {
 
     // Extract query parameters for filtering
     const { searchParams } = new URL(req.url)
-    const search = searchParams.get('search') || undefined
-    const country = searchParams.get('country') || undefined
-    const cargoType = searchParams.get('cargoType') || undefined
-    const urgency = searchParams.get('urgency') || undefined
-    const minPrice = searchParams.get('minPrice') ? parseInt(searchParams.get('minPrice')!) : undefined
-    const maxPrice = searchParams.get('maxPrice') ? parseInt(searchParams.get('maxPrice')!) : undefined
-    const sortBy = searchParams.get('sortBy') || 'newest'
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50
-    const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0
-    const mode = searchParams.get('mode') || 'manual' // manual or agent
+    
+    // Build filters object
+    const filters: CargoFilters = {}
+    
+    if (searchParams.get('search')) {
+      filters.search = searchParams.get('search')!
+    }
+    
+    if (searchParams.get('status')) {
+      filters.status = searchParams.get('status')!.split(',')
+    }
+    
+    if (searchParams.get('from_country')) {
+      filters.from_country = searchParams.get('from_country')!
+    }
+    
+    if (searchParams.get('to_country')) {
+      filters.to_country = searchParams.get('to_country')!
+    }
+    
+    if (searchParams.get('min_weight')) {
+      filters.min_weight = parseFloat(searchParams.get('min_weight')!)
+    }
+    
+    if (searchParams.get('max_weight')) {
+      filters.max_weight = parseFloat(searchParams.get('max_weight')!)
+    }
+    
+    if (searchParams.get('min_price')) {
+      filters.min_price = parseFloat(searchParams.get('min_price')!)
+    }
+    
+    if (searchParams.get('max_price')) {
+      filters.max_price = parseFloat(searchParams.get('max_price')!)
+    }
+    
+    if (searchParams.get('urgency')) {
+      filters.urgency = searchParams.get('urgency')!.split(',')
+    }
+    
+    if (searchParams.get('type')) {
+      filters.type = searchParams.get('type')!.split(',')
+    }
+    
+    if (searchParams.get('from_date')) {
+      filters.from_date = searchParams.get('from_date')!
+    }
+    
+    if (searchParams.get('to_date')) {
+      filters.to_date = searchParams.get('to_date')!
+    }
+    
+    // Build pagination object
+    const pagination: PaginationParams = {
+      page: parseInt(searchParams.get('page') || '1'),
+      limit: parseInt(searchParams.get('limit') || '20'),
+      sortBy: searchParams.get('sortBy') || 'created_ts',
+      sortOrder: (searchParams.get('sortOrder') as 'ASC' | 'DESC') || 'DESC'
+    }
 
-    // Get live cargo data from database
-    const cargoList = await cargoDb.getAll({
-      search,
-      country,
-      cargoType,
-      urgency,
-      minPrice,
-      maxPrice,
-      sortBy,
-      limit,
-      offset
-    })
-
-    // Transform database results to match expected format
-    const transformedCargo = cargoList.map(cargo => ({
+    // Get cargo data using marketplace service
+    const result = await listCargo(filters, pagination)
+    
+    // Transform to maintain backward compatibility
+    const transformedCargo = result.cargo.map(cargo => ({
       id: cargo.id,
       title: cargo.title,
       weight: cargo.weight,
@@ -65,59 +104,28 @@ export async function GET(req: NextRequest) {
       status: cargo.status,
       postingDate: cargo.posting_date,
       createdAt: cargo.created_ts,
-      updatedAt: cargo.updated_ts,
-      // Sender information
-      sender: {
-        id: cargo.sender_id,
-        name: cargo.sender_name,
-        email: cargo.sender_email,
-        rating: cargo.sender_rating,
-        verified: cargo.sender_verified,
-        avatar: cargo.sender_avatar,
-        company: cargo.sender_company,
-        location: cargo.sender_location,
-        lastSeen: cargo.sender_last_seen,
-        isOnline: cargo.sender_is_online
-      }
+      updatedAt: cargo.updated_ts
     }))
-
-    // Get total count for pagination
-    const totalCount = await cargoDb.getCount({
-      search,
-      country,
-      cargoType,
-      urgency,
-      minPrice,
-      maxPrice
-    })
 
     return NextResponse.json({
       cargo: transformedCargo,
       pagination: {
-        total: totalCount,
-        limit,
-        offset,
-        hasMore: offset + limit < totalCount
+        total: result.pagination.total,
+        limit: result.pagination.limit,
+        page: result.pagination.page,
+        totalPages: result.pagination.totalPages,
+        hasMore: result.pagination.hasMore
       },
-      filters: {
-        search,
-        country,
-        cargoType,
-        urgency,
-        minPrice,
-        maxPrice,
-        sortBy,
-        mode
-      },
+      filters: result.filters,
       _meta: {
         timestamp: new Date().toISOString(),
-        source: 'live_database',
+        source: process.env.USE_MOCK_MARKETPLACE === 'true' ? 'mock_data' : 'live_database',
         userId: userId,
         count: transformedCargo.length
       }
     })
   } catch (error) {
-    console.error('Error fetching cargo:', error)
+    console.error('❌ API: GET /api/cargo error:', error)
     return NextResponse.json({ error: 'Failed to fetch cargo' }, { status: 500 })
   }
 }
@@ -137,62 +145,81 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden - Only providers can create cargo' }, { status: 403 })
     }
     
+    // Check trial cargo limit (5 cargo max for trial users)
+    const publicMetadata = sessionClaims?.publicMetadata as any || {}
+    const { status, trialStartedAt } = publicMetadata
+    
+    if (status === 'TRIAL') {
+      // Get user info to count cargo
+      const userResult = await query('SELECT name, trial_started_at FROM users WHERE clerk_id = $1', [userId])
+      if (userResult.rows.length > 0) {
+        const userInfo = userResult.rows[0]
+        const trialStartTime = userInfo.trial_started_at
+        
+        if (trialStartTime) {
+          // Count cargo posted during trial period
+          const cargoCountResult = await query(`
+            SELECT COUNT(*) as count
+            FROM cargo 
+            WHERE provider_name = $1 
+            AND created_ts >= EXTRACT(EPOCH FROM $2) * 1000
+          `, [userInfo.name, trialStartTime])
+          
+          const cargoCount = parseInt(cargoCountResult.rows[0].count)
+          
+          if (cargoCount >= 5) {
+            return NextResponse.json({ 
+              error: 'Trial cargo limit exceeded', 
+              message: 'Trial users can post maximum 5 cargo listings. Please upgrade to continue.',
+              currentCount: cargoCount,
+              maxAllowed: 5,
+              redirectTo: '/billing'
+            }, { status: 403 })
+          }
+        }
+      }
+    }
+    
     const body = await req.json()
     
-    // Validate request body
-    const validation = cargoCreateSchema.safeParse(body)
-    if (!validation.success) {
-      return NextResponse.json({ 
-        error: 'Invalid data', 
-        details: validation.error.issues 
-      }, { status: 400 })
+    // Get user details for provider info
+    const userResult = await query('SELECT name, company FROM users WHERE clerk_id = $1', [userId])
+    const userInfo = userResult.rows[0] || {}
+    
+    // Build cargo data for marketplace service
+    const cargoData = {
+      title: body.title,
+      type: body.type || body.cargoType,
+      urgency: body.urgency || 'MEDIUM',
+      weight: parseFloat(body.weight),
+      volume: body.volume ? parseFloat(body.volume) : undefined,
+      from_addr: body.fromAddress,
+      from_country: body.fromCountry,
+      from_postal: body.fromPostal,
+      from_city: body.fromCity,
+      to_addr: body.toAddress,
+      to_country: body.toCountry,
+      to_postal: body.toPostal,
+      to_city: body.toCity,
+      from_lat: body.fromLat,
+      from_lng: body.fromLng,
+      to_lat: body.toLat,
+      to_lng: body.toLng,
+      load_date: body.loadingDate,
+      delivery_date: body.deliveryDate,
+      price: body.price ? parseFloat(body.price) : undefined,
+      price_per_kg: body.pricePerKg ? parseFloat(body.pricePerKg) : undefined,
+      provider_name: userInfo.name || body.provider || 'Unknown Provider',
+      provider_status: 'ACTIVE',
+      posting_date: new Date().toISOString().split('T')[0]
     }
     
-    const cargoData = validation.data
-
-    const cd: any = cargoData
-
-    // Create cargo in database
-    const newCargoId = `cargo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    const timestamp = Date.now()
+    // Create cargo using marketplace service
+    const createdCargo = await createCargo(cargoData)
     
-    const cargoToCreate = {
-      id: newCargoId,
-      title: cd.title,
-      type: cd.type,
-      urgency: cd.urgency,
-      weight: cd.weight,
-      volume: cd.volume,
-      from_addr: cd.fromAddress,
-      from_city: cd.fromCity,
-      from_postal: cd.fromPostal,
-      from_country: cd.fromCountry,
-      to_addr: cd.toAddress,
-      to_city: cd.toCity,
-      to_postal: cd.toPostal,
-      to_country: cd.toCountry,
-      from_lat: cd.fromLat ?? cd.pickupLat,
-      from_lng: cd.fromLng ?? cd.pickupLng,
-      to_lat: cd.toLat ?? cd.deliveryLat,
-      to_lng: cd.toLng ?? cd.deliveryLng,
-      load_date: cd.loadingDate,
-      delivery_date: cd.deliveryDate,
-      price: cd.price ?? cd.totalPrice ?? 0,
-      price_per_kg: cd.pricePerKg ?? 0,
-      provider_name: cd.providerName ?? cd.provider,
-      provider_status: cd.providerStatus || 'active',
-      status: 'active',
-      created_ts: timestamp,
-      updated_ts: timestamp,
-      posting_date: new Date().toISOString(),
-      sender_id: userId
-    }
+    console.log('✅ API: Cargo created successfully:', createdCargo.id)
     
-    const createdCargo = await cargoDb.create(cargoToCreate)
-    
-    console.log('✅ Cargo created in database:', createdCargo.id)
-    
-    // Transform back to expected format
+    // Transform response to maintain backward compatibility
     const responseData = {
       id: createdCargo.id,
       title: createdCargo.title,
@@ -228,7 +255,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(responseData, { status: 201 })
     
   } catch (error) {
-    console.error('Error creating cargo:', error)
+    console.error('❌ API: POST /api/cargo error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
