@@ -16,13 +16,15 @@ const isProtectedRoute = createRouteMatcher([
   '/api/stats(.*)'
 ])
 
-// Routes that should be accessible during onboarding
+// Routes that should be accessible during onboarding and billing
 const isOnboardingRoute = createRouteMatcher([
   '/onboarding(.*)',
   '/sign-in(.*)',
   '/sign-up(.*)',
+  '/billing(.*)',
   '/api/webhooks(.*)',
-  '/api/users/profile(.*)'
+  '/api/users/profile(.*)',
+  '/api/verification(.*)'
 ])
 
 export default clerkMiddleware(async (auth, req) => {
@@ -64,18 +66,47 @@ export default clerkMiddleware(async (auth, req) => {
     try {
       const { sessionClaims } = await auth()
       const publicMetadata = sessionClaims?.publicMetadata || {}
-      const { createdAt, profileCompleted, trialStarted } = publicMetadata
+      const { status, trialExpiresAt, profileCompleted, verification_status } = publicMetadata
       
-      // If user has metadata and trial is active
-      if (trialStarted && createdAt && !profileCompleted) {
-        const now = Date.now()
-        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
-        const trialExpired = (now - Number(createdAt)) > sevenDaysMs
+      // Check if user has an expired trial
+      const now = Date.now()
+      const isTrialExpired = trialExpiresAt && now > Number(trialExpiresAt)
+      const isTrialUser = status === 'TRIAL'
+      const isVerified = verification_status === 'verified'
+      
+      // If trial expired and not verified, redirect based on route type
+      if (isTrialUser && isTrialExpired && !isVerified) {
+        console.log('🔄 Trial expired, user needs upgrade:', { userId, status, isTrialExpired })
         
-        // If trial expired and profile not completed, force onboarding
-        if (trialExpired && !req.nextUrl.pathname.startsWith('/onboarding')) {
-          console.log('🔄 Trial expired, redirecting to onboarding:', userId)
-          return NextResponse.redirect(new URL('/onboarding', req.url))
+        // For API routes, return 402 Payment Required
+        if (req.nextUrl.pathname.startsWith('/api/')) {
+          return NextResponse.json(
+            { 
+              error: 'Trial expired', 
+              message: 'Your 7-day trial has expired. Please upgrade to continue.',
+              redirectTo: '/billing'
+            }, 
+            { status: 402 }
+          )
+        }
+        
+        // For web routes, redirect to billing page
+        if (!req.nextUrl.pathname.startsWith('/billing')) {
+          return NextResponse.redirect(new URL('/billing', req.url))
+        }
+      }
+      
+      // Legacy check for old trial system (can be removed after migration)
+      if (!status && !profileCompleted) {
+        const { createdAt, trialStarted } = publicMetadata
+        if (trialStarted && createdAt) {
+          const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
+          const trialExpired = (now - Number(createdAt)) > sevenDaysMs
+          
+          if (trialExpired && !req.nextUrl.pathname.startsWith('/onboarding')) {
+            console.log('🔄 Legacy trial expired, redirecting to onboarding:', userId)
+            return NextResponse.redirect(new URL('/onboarding', req.url))
+          }
         }
       }
     } catch (error) {

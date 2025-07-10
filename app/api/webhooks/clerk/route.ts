@@ -54,27 +54,36 @@ export async function POST(req: NextRequest) {
       console.log('🔔 User created webhook received:', { userId, email, fullName })
 
       try {
+        // Calculate trial expiration (7 days from now)
+        const trialExpiresAt = new Date()
+        trialExpiresAt.setDate(trialExpiresAt.getDate() + 7)
+
         // Set initial metadata in Clerk
         await clerkClient.users.updateUserMetadata(userId, {
           publicMetadata: {
             createdAt: Date.now(),
             profileCompleted: false,
             trialStarted: true,
+            trialExpiresAt: trialExpiresAt.getTime(),
+            status: 'TRIAL',
             role: null // Will be set during onboarding
           }
         })
 
-        // Save to database as backup
+        // Save to database with trial setup
         await query(`
           INSERT INTO users (
             clerk_id, email, name, profile_completed, 
-            trial_started, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+            trial_started, status, trial_expires_at, 
+            created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
           ON CONFLICT (clerk_id) DO UPDATE SET
             email = EXCLUDED.email,
             name = EXCLUDED.name,
+            trial_expires_at = EXCLUDED.trial_expires_at,
+            status = EXCLUDED.status,
             updated_at = NOW()
-        `, [userId, email, fullName, false, true])
+        `, [userId, email, fullName, false, true, 'TRIAL', trialExpiresAt])
 
         console.log('✅ User trial setup completed:', userId)
 
