@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0')
 
     const result = await query(`
-      SELECT 
+      SELECT
         vr.*,
         u.name as user_name,
         u.email as user_email,
@@ -124,20 +124,19 @@ export async function POST(req: NextRequest) {
     const userVerificationStatus = action === 'approve' ? 'verified' : 'unverified'
 
     await query(`
-      UPDATE verification_requests 
+      UPDATE verification_requests
       SET status = $1, processed_at = NOW(), processed_by = $2, rejection_reason = $3, updated_at = NOW()
       WHERE id = $4
     `, [newStatus, adminCheck.userId, rejectionReason || null, requestId])
 
     await query(`
-      UPDATE users 
+      UPDATE users
       SET verification_status = $1, verification_processed_at = NOW(), updated_at = NOW()
       WHERE clerk_id = $2
     `, [userVerificationStatus, request.user_id])
 
     try {
-      const clerk = await clerkClient();
-      await clerk.users.updateUserMetadata(request.user_id, {
+      await clerkClient.users.updateUserMetadata(request.user_id, {
         publicMetadata: {
           verification_status: userVerificationStatus,
           verification_processed_at: new Date().toISOString()
