@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useUserRole } from '@/lib/useUserRole'
+import { useAuth } from '@clerk/nextjs'
 import VerificationBadge from '@/components/VerificationBadge'
 
 interface VerificationRequest {
@@ -32,7 +32,7 @@ interface VerificationRequest {
 }
 
 export default function AdminVerificationsPage() {
-  const { role } = useUserRole()
+  const { orgRole } = useAuth()
   const [requests, setRequests] = useState<VerificationRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -40,7 +40,7 @@ export default function AdminVerificationsPage() {
   const [processingId, setProcessingId] = useState<number | null>(null)
 
   // Check if user is admin
-  if (role !== 'admin') {
+  if (orgRole !== 'admin') {
     return (
       <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
         <div className="text-center">
