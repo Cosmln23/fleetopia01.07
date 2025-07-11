@@ -11,6 +11,9 @@ RUN pnpm install --frozen-lockfile
 FROM node:18-alpine AS builder
 WORKDIR /app
 
+# Install pnpm
+RUN npm install -g pnpm
+
 # Copy dependencies
 COPY --from=dependencies /app/node_modules ./node_modules
 
@@ -18,7 +21,7 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 
 # Build the application
-RUN npm run build
+RUN pnpm run build
 
 # Production stage
 FROM node:18-alpine AS production
