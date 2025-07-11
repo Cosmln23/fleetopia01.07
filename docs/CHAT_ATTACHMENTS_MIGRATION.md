@@ -81,12 +81,23 @@ git push -u origin feature/marketplace-fleet
 - **Flexibilitate:** Suport pentru orice tip de fișier
 - **Auditability:** Tracking complet al fișierelor uploadate
 
+## Issues Encountered & Fixed
+
+### Docker Build Issue
+**Problem:** Railway build failed due to inconsistent use of `npm` vs `pnpm` in Dockerfile.
+- Dependencies installed with `pnpm` but build tried to use `npm`
+- **Fix:** Modified Dockerfile to use `pnpm run build` for consistency
+
+**Commit Fix:** `12cec79 - Fix Dockerfile to use pnpm for build consistency`
+
 ## Status
 ✅ **Migration Created & Pushed**  
+✅ **Dockerfile Build Issue Fixed**  
 ⏳ **Awaiting Railway Deployment**  
 ⏳ **Next: API Implementation**
 
 ---
 *Creat: 2025-07-11*  
 *Branch: feature/marketplace-fleet*  
-*Commit: 3e08685* 
+*Migration Commit: 3e08685*  
+*Dockerfile Fix: 12cec79* 
