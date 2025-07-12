@@ -163,8 +163,14 @@ export function useAgentNegotiator() {
     }
   }, [levelSettings.L2, agentState.metrics.acceptanceRate])
 
-  // L3: Auto-tune based on feedback
+  // L3: Auto-tune based on feedback - SUSPENDED until 50 users
   const processL3AutoTune = useCallback((quoteId: string, success: boolean) => {
+    // L3 suspended for MVP - reactivate after reaching 50 active users
+    console.log(`Agent L3: SUSPENDED - Auto-tune disabled for MVP. Quote ${quoteId}: ${success ? 'ACCEPTED' : 'REJECTED'}`)
+    return
+    
+    // Original L3 code suspended below:
+    /*
     if (!levelSettings.L3) return
 
     console.log(`Agent L3: Processing feedback for quote ${quoteId}: ${success ? 'ACCEPTED' : 'REJECTED'}`)
@@ -193,14 +199,21 @@ export function useAgentNegotiator() {
     // Log learning event
     const adjustment = success ? 'reducing margin (more competitive)' : 'increasing margin (more conservative)'
     console.log(`Agent L3: Learning event - ${adjustment}. New acceptance rate: ${agentState.metrics.acceptanceRate.toFixed(2)}`)
+    */
 
   }, [levelSettings.L3, adjustMargin, agentState.metrics.acceptanceRate])
 
-  // L4: Negotiation assist and counter-offers
+  // L4: Negotiation assist and counter-offers - SUSPENDED until 50 users
   const processL4Negotiation = useCallback((
     offer: CargoOffer, 
     counterOfferData: CounterOfferData
   ): AgentSuggestion | null => {
+    // L4 suspended for MVP - reactivate after reaching 50 active users
+    console.log(`Agent L4: SUSPENDED - Advanced negotiation disabled for MVP simplicity`)
+    return null
+    
+    // Original L4 code suspended below:
+    /*
     if (!levelSettings.L4) return null
 
     const { counterPrice, minAcceptable, currentCounters, maxCounters } = counterOfferData
@@ -250,6 +263,7 @@ export function useAgentNegotiator() {
       reasoning: `Counter-offer too low (${profitPctAtCounter.toFixed(1)}% profit). Suggesting counter: €${ourCounter}`,
       createdAt: new Date().toISOString()
     }
+    */
   }, [levelSettings.L4, costSettings.marginPct, processL1Calculator, calculateConfidence])
 
   // Process offers through agent pipeline
@@ -354,14 +368,18 @@ export function useAgentNegotiator() {
     }
   }, [agentEnabled, externalOffers, agentState.isProcessing, agentState.processedOffers, processOffer])
 
-  // Handle quote status updates for L3 learning
+  // Handle quote status updates for L3 learning - SUSPENDED
   useEffect(() => {
+    // L3 learning suspended for MVP - quotes still tracked but no auto-tuning
+    console.log('Agent L3: Quote status tracking suspended for MVP')
+    /*
     quotes.forEach(quote => {
       if (quote.source === 'agent' && quote.status !== 'pending') {
         const success = quote.status === 'accepted'
         processL3AutoTune(quote.id, success)
       }
     })
+    */
   }, [quotes, processL3AutoTune])
 
   // Send agent message for negotiation

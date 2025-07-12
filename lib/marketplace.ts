@@ -14,8 +14,8 @@
 import { query } from './db'
 import { z } from 'zod'
 
-// Feature flag configuration
-const USE_MOCK_MARKETPLACE = process.env.USE_MOCK_MARKETPLACE === 'true'
+// Mock functionality removed for production readiness
+// All data now comes from PostgreSQL database
 
 // TypeScript interfaces
 export interface Cargo {
@@ -127,65 +127,7 @@ const offerSchema = z.object({
   message: z.string().optional()
 })
 
-// Mock data for development
-const mockCargo: Cargo[] = [
-  {
-    id: 'mock-1',
-    title: 'Electronics Transport - Bucharest to Cluj',
-    type: 'Electronics',
-    urgency: 'HIGH',
-    weight: 500,
-    volume: 2.5,
-    from_addr: 'Strada Victoriei 1, Bucharest',
-    from_country: 'Romania',
-    from_city: 'Bucharest',
-    to_addr: 'Strada Memorandumului 28, Cluj-Napoca',
-    to_country: 'Romania',
-    to_city: 'Cluj-Napoca',
-    from_lat: 44.4268,
-    from_lng: 26.1025,
-    to_lat: 46.7712,
-    to_lng: 23.6236,
-    load_date: '2025-07-16',
-    delivery_date: '2025-07-18',
-    price: 1200,
-    price_per_kg: 2.4,
-    provider_name: 'TechCorp SRL',
-    provider_status: 'VERIFIED',
-    status: 'NEW',
-    created_ts: Date.now() - 3600000,
-    updated_ts: Date.now() - 3600000,
-    posting_date: '2025-07-15'
-  },
-  {
-    id: 'mock-2',
-    title: 'Furniture Delivery - Timisoara to Iasi',
-    type: 'Furniture',
-    urgency: 'MEDIUM',
-    weight: 1200,
-    volume: 8.0,
-    from_addr: 'Bulevardul Revoluției 6, Timișoara',
-    from_country: 'Romania',
-    from_city: 'Timișoara',
-    to_addr: 'Strada Păcurari 4, Iași',
-    to_country: 'Romania',
-    to_city: 'Iași',
-    from_lat: 45.7489,
-    from_lng: 21.2087,
-    to_lat: 47.1585,
-    to_lng: 27.6014,
-    load_date: '2025-07-20',
-    delivery_date: '2025-07-22',
-    price: 800,
-    price_per_kg: 0.67,
-    provider_name: 'MobilCasa',
-    provider_status: 'ACTIVE',
-    status: 'OPEN',
-    created_ts: Date.now() - 7200000,
-    updated_ts: Date.now() - 3600000,
-    posting_date: '2025-07-15'
-  }
-]
+// Mock data removed - using real PostgreSQL data only
 
 /**
  * List cargo with filtering and pagination
@@ -194,11 +136,7 @@ export async function listCargo(
   filters: CargoFilters = {},
   pagination: PaginationParams = { page: 1, limit: 20 }
 ): Promise<CargoListResponse> {
-  console.log('🔍 Marketplace: listCargo called', { filters, pagination, useMock: USE_MOCK_MARKETPLACE })
-  
-  if (USE_MOCK_MARKETPLACE) {
-    return listCargoMock(filters, pagination)
-  }
+  console.log('🔍 Marketplace: listCargo called', { filters, pagination, source: 'database' })
   
   try {
     const offset = (pagination.page - 1) * pagination.limit
@@ -345,12 +283,7 @@ export async function listCargo(
  * Get cargo details by ID
  */
 export async function getCargoDetails(cargoId: string): Promise<Cargo | null> {
-  console.log('🔍 Marketplace: getCargoDetails called', { cargoId, useMock: USE_MOCK_MARKETPLACE })
-  
-  if (USE_MOCK_MARKETPLACE) {
-    const cargo = mockCargo.find(c => c.id === cargoId)
-    return cargo || null
-  }
+  console.log('🔍 Marketplace: getCargoDetails called', { cargoId, source: 'database' })
   
   try {
     const result = await query('SELECT * FROM cargo WHERE id = $1', [cargoId])
@@ -373,22 +306,10 @@ export async function getCargoDetails(cargoId: string): Promise<Cargo | null> {
  * Create new cargo listing
  */
 export async function createCargo(cargoData: Omit<Cargo, 'id' | 'created_ts' | 'updated_ts' | 'status'>): Promise<Cargo> {
-  console.log('🔍 Marketplace: createCargo called', { useMock: USE_MOCK_MARKETPLACE })
+  console.log('🔍 Marketplace: createCargo called', { source: 'database' })
   
   // Validate input
   const validatedData = cargoSchema.parse(cargoData)
-  
-  if (USE_MOCK_MARKETPLACE) {
-    const newCargo: Cargo = {
-      ...validatedData,
-      id: `mock-${Date.now()}`,
-      status: 'NEW',
-      created_ts: Date.now(),
-      updated_ts: Date.now()
-    }
-    mockCargo.unshift(newCargo)
-    return newCargo
-  }
   
   try {
     const cargoId = `cargo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
@@ -436,21 +357,10 @@ export async function createCargo(cargoData: Omit<Cargo, 'id' | 'created_ts' | '
  * Submit offer for cargo
  */
 export async function submitOffer(offerData: Omit<CargoOffer, 'id' | 'created_ts' | 'status'>): Promise<CargoOffer> {
-  console.log('🔍 Marketplace: submitOffer called', { useMock: USE_MOCK_MARKETPLACE })
+  console.log('🔍 Marketplace: submitOffer called', { source: 'database' })
   
   // Validate input
   const validatedData = offerSchema.parse(offerData)
-  
-  if (USE_MOCK_MARKETPLACE) {
-    const newOffer: CargoOffer = {
-      ...validatedData,
-      id: `mock-offer-${Date.now()}`,
-      status: 'PENDING',
-      created_ts: Date.now()
-    }
-    console.log('✅ Marketplace: submitOffer success (mock)', { offerId: newOffer.id })
-    return newOffer
-  }
   
   try {
     // Check if cargo exists
@@ -496,22 +406,7 @@ export async function submitOffer(offerData: Omit<CargoOffer, 'id' | 'created_ts
  * Get offers for cargo
  */
 export async function getCargoOffers(cargoId: string): Promise<CargoOffer[]> {
-  console.log('🔍 Marketplace: getCargoOffers called', { cargoId, useMock: USE_MOCK_MARKETPLACE })
-  
-  if (USE_MOCK_MARKETPLACE) {
-    // Mock offers for testing
-    return [
-      {
-        id: 'mock-offer-1',
-        cargo_id: cargoId,
-        transporter_id: 'user-123',
-        proposed_price: 1000,
-        message: 'Can deliver within 2 days',
-        status: 'PENDING',
-        created_ts: Date.now() - 1800000
-      }
-    ]
-  }
+  console.log('🔍 Marketplace: getCargoOffers called', { cargoId, source: 'database' })
   
   try {
     const result = await query(`
@@ -535,17 +430,7 @@ export async function getCargoOffers(cargoId: string): Promise<CargoOffer[]> {
  * Update cargo status
  */
 export async function updateCargoStatus(cargoId: string, status: Cargo['status']): Promise<boolean> {
-  console.log('🔍 Marketplace: updateCargoStatus called', { cargoId, status, useMock: USE_MOCK_MARKETPLACE })
-  
-  if (USE_MOCK_MARKETPLACE) {
-    const cargo = mockCargo.find(c => c.id === cargoId)
-    if (cargo) {
-      cargo.status = status
-      cargo.updated_ts = Date.now()
-      return true
-    }
-    return false
-  }
+  console.log('🔍 Marketplace: updateCargoStatus called', { cargoId, status, source: 'database' })
   
   try {
     const result = await query(`
@@ -564,80 +449,13 @@ export async function updateCargoStatus(cargoId: string, status: Cargo['status']
   }
 }
 
-/**
- * Mock data handler for development
- */
-function listCargoMock(filters: CargoFilters, pagination: PaginationParams): CargoListResponse {
-  let filteredCargo = [...mockCargo]
-  
-  // Apply filters
-  if (filters.status && filters.status.length > 0) {
-    filteredCargo = filteredCargo.filter(c => filters.status!.includes(c.status))
-  }
-  
-  if (filters.from_country) {
-    filteredCargo = filteredCargo.filter(c => c.from_country === filters.from_country)
-  }
-  
-  if (filters.to_country) {
-    filteredCargo = filteredCargo.filter(c => c.to_country === filters.to_country)
-  }
-  
-  if (filters.min_weight !== undefined) {
-    filteredCargo = filteredCargo.filter(c => c.weight >= filters.min_weight!)
-  }
-  
-  if (filters.max_weight !== undefined) {
-    filteredCargo = filteredCargo.filter(c => c.weight <= filters.max_weight!)
-  }
-  
-  if (filters.search) {
-    const searchTerm = filters.search.toLowerCase()
-    filteredCargo = filteredCargo.filter(c =>
-      c.title.toLowerCase().includes(searchTerm) ||
-      c.from_addr.toLowerCase().includes(searchTerm) ||
-      c.to_addr.toLowerCase().includes(searchTerm) ||
-      c.provider_name.toLowerCase().includes(searchTerm)
-    )
-  }
-  
-  // Apply pagination
-  const total = filteredCargo.length
-  const offset = (pagination.page - 1) * pagination.limit
-  const paginatedCargo = filteredCargo.slice(offset, offset + pagination.limit)
-  
-  const totalPages = Math.ceil(total / pagination.limit)
-  const hasMore = pagination.page < totalPages
-  
-  return {
-    cargo: paginatedCargo,
-    pagination: {
-      page: pagination.page,
-      limit: pagination.limit,
-      total,
-      hasMore,
-      totalPages
-    },
-    filters
-  }
-}
+// Mock data handler removed - all data from PostgreSQL
 
 /**
  * Get marketplace statistics
  */
 export async function getMarketplaceStats() {
-  console.log('🔍 Marketplace: getMarketplaceStats called', { useMock: USE_MOCK_MARKETPLACE })
-  
-  if (USE_MOCK_MARKETPLACE) {
-    return {
-      total_cargo: mockCargo.length,
-      active_cargo: mockCargo.filter(c => c.status === 'NEW' || c.status === 'OPEN').length,
-      completed_cargo: mockCargo.filter(c => c.status === 'COMPLETED').length,
-      total_offers: 5,
-      pending_offers: 3,
-      accepted_offers: 2
-    }
-  }
+  console.log('🔍 Marketplace: getMarketplaceStats called', { source: 'database' })
   
   try {
     const result = await query(`

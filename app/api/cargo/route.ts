@@ -119,7 +119,7 @@ export async function GET(req: NextRequest) {
       filters: result.filters,
       _meta: {
         timestamp: new Date().toISOString(),
-        source: process.env.USE_MOCK_MARKETPLACE === 'true' ? 'mock_data' : 'live_database',
+        source: 'live_database',
         userId: userId,
         count: transformedCargo.length
       }

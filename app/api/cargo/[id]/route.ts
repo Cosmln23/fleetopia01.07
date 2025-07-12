@@ -67,7 +67,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       cargo: transformedCargo,
       _meta: {
         timestamp: new Date().toISOString(),
-        source: process.env.USE_MOCK_MARKETPLACE === 'true' ? 'mock_data' : 'live_database',
+        source: 'live_database',
         userId: userId
       }
     })
@@ -142,7 +142,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         },
         _meta: {
           timestamp: new Date().toISOString(),
-          source: process.env.USE_MOCK_MARKETPLACE === 'true' ? 'mock_data' : 'live_database',
+          source: 'live_database',
           userId: userId,
           action: 'status_update'
         }

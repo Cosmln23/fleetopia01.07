@@ -233,6 +233,12 @@ export default function DispatcherPage() {
   const handleLevelToggle = (level: keyof LevelSettings) => {
     if (!isAgentActive) return // Nu permite toggle dacă agentul nu e activ
     
+    // Block L3/L4 toggle during MVP phase
+    if (level === 'L3' || level === 'L4') {
+      console.log(`⚠️ ${level} suspended for MVP - will be reactivated after 50 users`)
+      return
+    }
+    
     const newState = !levelSettings[level]
     const newLevels = { ...levelSettings, [level]: newState }
     setLevelSettings(newLevels)
@@ -393,20 +399,20 @@ export default function DispatcherPage() {
             <LevelToggle
               id="L3"
               label="Auto-Tune"
-              shortDesc="Automatic pricing optimization"
-              detailedDesc="Learns from quote feedback and automatically optimizes pricing strategies to improve acceptance rates"
-              enabled={levelSettings.L3}
-              disabled={!isAgentActive}
+              shortDesc="Automatic pricing optimization (SUSPENDED for MVP)"
+              detailedDesc="SUSPENDED until 50 users - Learns from quote feedback and automatically optimizes pricing strategies to improve acceptance rates"
+              enabled={false}
+              disabled={true}
               onToggle={(id, enabled) => handleLevelToggle(id as keyof LevelSettings)}
             />
             
             <LevelToggle
               id="L4"
               label="Negotiation Assist"
-              shortDesc="Automatic negotiation management"
-              detailedDesc="Automatically manages negotiations, evaluates counter-offers and suggests optimal responses during negotiation process"
-              enabled={levelSettings.L4}
-              disabled={!isAgentActive}
+              shortDesc="Automatic negotiation management (SUSPENDED for MVP)"
+              detailedDesc="SUSPENDED until 50 users - Automatically manages negotiations, evaluates counter-offers and suggests optimal responses during negotiation process"
+              enabled={false}
+              disabled={true}
               onToggle={(id, enabled) => handleLevelToggle(id as keyof LevelSettings)}
             />
           </div>
