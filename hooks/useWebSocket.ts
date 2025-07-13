@@ -38,7 +38,8 @@ export const useWebSocket = (cargoId?: string) => {
     // Initialize socket connection
     const initSocket = () => {
       try {
-        const newSocket = io(process.env.NEXT_PUBLIC_WS_URL || window.location.origin, {
+        const wsUrl = window.location.origin; // Force relative to current domain to fix mismatch
+        const newSocket = io(wsUrl, {
           path: '/api/socket',
           transports: ['websocket', 'polling'],
           upgrade: true,
