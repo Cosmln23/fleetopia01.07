@@ -91,3 +91,10 @@
   status = 200
   force = true
   headers = { X-From = "Netlify", Cache-Control = "no-cache" }
+
+[[redirects]]
+  from = "/api/health"
+  to = "/.netlify/functions/api/health"
+  status = 200
+  force = true
+  headers = { X-From = "Netlify", Cache-Control = "no-cache" }
