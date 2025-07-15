@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useUser } from '@clerk/nextjs'
 import { CargoOffer } from '@/lib/types'
 import { formatPrice } from '@/lib/formatters'
 import { getCargoDistance, formatDistance } from '@/lib/distanceCalculator'
@@ -25,11 +26,15 @@ export default function CargoDetailsModal({
   onSendQuote,
   onIgnore
 }: CargoDetailsModalProps) {
+  const { user } = useUser()
   const [showChat, setShowChat] = useState(false)
   const [showCostBreakdown, setShowCostBreakdown] = useState(false)
   const [customPrice, setCustomPrice] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [negotiationStatus, setNegotiationStatus] = useState<'initial' | 'quote_sent' | 'negotiating' | 'accepted' | 'rejected'>('initial')
+
+  // Check if current user is the cargo owner
+  const isOwner = user && cargo && cargo.sender && user.id === cargo.sender.id
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -47,7 +52,7 @@ export default function CargoDetailsModal({
   const suggestedPrice = Math.round(cargo.price * 0.85) // 15% lower than posted price
 
   const handleSendQuote = async () => {
-    if (isSubmitting) return
+    if (isSubmitting || isOwner) return
     
     setIsSubmitting(true)
     try {
@@ -297,27 +302,31 @@ export default function CargoDetailsModal({
 
           {/* Actions */}
           <div className="flex gap-3 pt-4 border-t border-[#363636]">
-            <button
-              onClick={handleSendQuote}
-              disabled={isSubmitting}
-              className="bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white px-6 py-3 rounded-lg font-medium transition-colors flex-1"
-            >
-              {isSubmitting ? 'Sending...' : `Take cargo €${customPrice || suggestedPrice}`}
-            </button>
+            {!isOwner && (
+              <>
+                <button
+                  onClick={handleSendQuote}
+                  disabled={isSubmitting}
+                  className="bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white px-6 py-3 rounded-lg font-medium transition-colors flex-1"
+                >
+                  {isSubmitting ? 'Sending...' : `Take cargo €${customPrice || suggestedPrice}`}
+                </button>
+                
+                <button
+                  onClick={handleIgnore}
+                  disabled={isSubmitting}
+                  className="bg-[#363636] hover:bg-[#4d4d4d] disabled:bg-[#2d2d2d] text-[#adadad] hover:text-white px-4 py-3 rounded-lg font-medium transition-colors"
+                >
+                  Ignore
+                </button>
+              </>
+            )}
             
             <button
               onClick={() => setShowChat(!showChat)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
             >
-              Chat with shipper
-            </button>
-            
-            <button
-              onClick={handleIgnore}
-              disabled={isSubmitting}
-              className="bg-[#363636] hover:bg-[#4d4d4d] disabled:bg-[#2d2d2d] text-[#adadad] hover:text-white px-4 py-3 rounded-lg font-medium transition-colors"
-            >
-              Ignore
+              {isOwner ? 'View Messages' : 'Chat with shipper'}
             </button>
           </div>
 
@@ -328,6 +337,7 @@ export default function CargoDetailsModal({
                 cargoId={cargo.id} 
                 onQuoteSent={handleQuoteSentFromChat}
                 suggestedPrice={suggestedPrice}
+                isOwner={isOwner}
               />
             </div>
           )}

@@ -8,6 +8,8 @@ import CargoDetailsModal from '@/components/CargoDetailsModal'
 import { CargoOffer, CargoType, UrgencyLevel } from '@/lib/types'
 import { useStickyNavigation } from '@/contexts/StickyNavigationContext'
 import { getCargoDistance, formatDistance } from '@/lib/distanceCalculator'
+import { getGoogleMapsDirURL, buildCompleteAddress } from '@/lib/googleMaps'
+import useSWR, { mutate } from 'swr'
 
 // Helper functions moved from mock-data
 const getStatusColor = (status: string) => {
@@ -53,8 +55,6 @@ export default function MarketplacePage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isCargoDetailsOpen, setIsCargoDetailsOpen] = useState(false)
   const [selectedCargo, setSelectedCargo] = useState<CargoOffer | null>(null)
-  const [cargoOffers, setCargoOffers] = useState<CargoOffer[]>([])
-  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [filters, setFilters] = useState({
     country: '',
@@ -66,36 +66,34 @@ export default function MarketplacePage() {
   })
   const { setModalOpen } = useStickyNavigation()
 
-  // Fetch cargo offers from API
-  useEffect(() => {
-    const fetchCargoOffers = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch('/api/marketplace-offers')
-        if (response.ok) {
-          const data = await response.json()
-          setCargoOffers(data.offers || [])
-        } else {
-          console.error('Failed to fetch cargo offers')
-        }
-      } catch (error) {
-        console.error('Error fetching cargo offers:', error)
-      } finally {
-        setLoading(false)
+  // Use SWR for data fetching with revalidation
+  const { data: cargoOffers = [], error, isLoading } = useSWR('/api/marketplace-offers', async (url: string) => {
+    const response = await fetch(url)
+    if (!response.ok) throw new Error('Failed to fetch cargo offers')
+    const data = await response.json()
+    return data.offers || []
+  }, {
+    refreshInterval: 30000, // Refresh every 30 seconds
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true
+  })
+
+  const handleAddCargo = async (cargoData: Omit<CargoOffer, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      // Send to API first
+      const response = await fetch('/api/cargo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cargoData)
+      })
+      
+      if (response.ok) {
+        // Revalidate SWR cache to fetch fresh data
+        mutate('/api/marketplace-offers')
       }
+    } catch (error) {
+      console.error('Failed to add cargo:', error)
     }
-
-    fetchCargoOffers()
-  }, [])
-
-  const handleAddCargo = (cargoData: Omit<CargoOffer, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newCargo: CargoOffer = {
-      ...cargoData,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-    setCargoOffers(prev => [newCargo, ...prev])
   }
 
   const handleCargoClick = (cargo: CargoOffer) => {
@@ -118,70 +116,37 @@ export default function MarketplacePage() {
     console.log('Ignoring cargo:', cargoId)
   }
 
-  // Filter and search logic
-  const filteredOffers = useMemo(() => {
-    let filtered = cargoOffers
-
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter(offer => 
-        offer.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        offer.fromAddress.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        offer.toAddress.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        offer.provider.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    }
-
-    // Country filter
-    if (filters.country) {
-      filtered = filtered.filter(offer => 
-        offer.fromCountry.toLowerCase().includes(filters.country.toLowerCase()) ||
-        offer.toCountry.toLowerCase().includes(filters.country.toLowerCase())
-      )
-    }
-
-    // Cargo type filter
-    if (filters.cargoType) {
-      filtered = filtered.filter(offer => offer.cargoType === filters.cargoType)
-    }
-
-    // Urgency filter
-    if (filters.urgency) {
-      filtered = filtered.filter(offer => offer.urgency === filters.urgency)
-    }
-
-    // Price filters
-    if (filters.minPrice) {
-      filtered = filtered.filter(offer => offer.price >= parseFloat(filters.minPrice))
-    }
-    if (filters.maxPrice) {
-      filtered = filtered.filter(offer => offer.price <= parseFloat(filters.maxPrice))
-    }
-
-    // Sort
+  // Filter and sort cargo offers
+  const filteredOffers = cargoOffers.filter((offer: CargoOffer) => {
+    const matchesSearch = 
+      offer.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      offer.fromAddress.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      offer.toAddress.toLowerCase().includes(searchQuery.toLowerCase())
+    
+    const matchesCountry = !filters.country || 
+      offer.fromCountry === filters.country || 
+      offer.toCountry === filters.country
+    
+    const matchesCargoType = !filters.cargoType || offer.cargoType === filters.cargoType
+    const matchesUrgency = !filters.urgency || offer.urgency === filters.urgency
+    
+    const matchesPrice = (!filters.minPrice || offer.price >= parseFloat(filters.minPrice)) &&
+                        (!filters.maxPrice || offer.price <= parseFloat(filters.maxPrice))
+    
+    return matchesSearch && matchesCountry && matchesCargoType && matchesUrgency && matchesPrice
+  }).sort((a: CargoOffer, b: CargoOffer) => {
     switch (filters.sortBy) {
-      case 'price-low':
-        filtered.sort((a, b) => a.price - b.price)
-        break
-      case 'price-high':
-        filtered.sort((a, b) => b.price - a.price)
-        break
-      case 'weight':
-        filtered.sort((a, b) => b.weight - a.weight)
-        break
-      case 'urgency':
-        const urgencyOrder = { 'Urgent': 4, 'High': 3, 'Medium': 2, 'Low': 1 }
-        filtered.sort((a, b) => (urgencyOrder[b.urgency as keyof typeof urgencyOrder] || 0) - (urgencyOrder[a.urgency as keyof typeof urgencyOrder] || 0))
-        break
-      case 'oldest':
-        filtered.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-        break
-      default: // newest
-        filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      case 'price_low':
+        return a.price - b.price
+      case 'price_high':
+        return b.price - a.price
+      case 'distance':
+        return getCargoDistance(a) - getCargoDistance(b)
+      case 'newest':
+      default:
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     }
-
-    return filtered
-  }, [cargoOffers, searchQuery, filters])
+  })
 
   const handleFilterChange = (filterType: string, value: string) => {
     setFilters(prev => ({ ...prev, [filterType]: value }))
@@ -340,7 +305,7 @@ export default function MarketplacePage() {
         )}
       </p>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-3 p-4">
-        {loading ? (
+        {isLoading ? (
           // Loading skeleton
           Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="flex flex-col bg-[#2d2d2d] rounded-xl border border-[#363636] p-3 animate-pulse">

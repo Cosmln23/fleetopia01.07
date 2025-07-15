@@ -22,9 +22,10 @@ interface ChatPanelProps {
   cargoId: string
   onQuoteSent?: (price: number) => void
   suggestedPrice?: number
+  isOwner?: boolean
 }
 
-export default function ChatPanel({ cargoId, onQuoteSent, suggestedPrice }: ChatPanelProps) {
+export default function ChatPanel({ cargoId, onQuoteSent, suggestedPrice, isOwner }: ChatPanelProps) {
   // WebSocket integration
   const {
     connected: wsConnected,
@@ -504,30 +505,34 @@ Profit margin: ${((parseFloat(quoteAmount || suggestedPrice?.toString() || '800'
 
       {/* Quick Actions */}
       <div className="flex gap-2 mb-3">
-        <button
-          onClick={() => setShowQuoteInput(!showQuoteInput)}
-          className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
-        >
-          💰 Send Quote
-        </button>
+        {!isOwner && (
+          <>
+            <button
+              onClick={() => setShowQuoteInput(!showQuoteInput)}
+              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+            >
+              💰 Send Quote
+            </button>
+            {suggestedPrice && (
+              <button
+                onClick={() => sendQuote(suggestedPrice)}
+                className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+              >
+                ⭐ Use Suggested €{suggestedPrice}
+              </button>
+            )}
+          </>
+        )}
         <button
           onClick={askAgentCalculation}
           className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
         >
           🤖 Ask Agent
         </button>
-        {suggestedPrice && (
-          <button
-            onClick={() => sendQuote(suggestedPrice)}
-            className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
-          >
-            ⭐ Use Suggested €{suggestedPrice}
-          </button>
-        )}
       </div>
       
       {/* Quote Input */}
-      {showQuoteInput && (
+      {showQuoteInput && !isOwner && (
         <div className="bg-[#363636] rounded-lg p-3 mb-3">
           <div className="flex gap-2">
             <input
