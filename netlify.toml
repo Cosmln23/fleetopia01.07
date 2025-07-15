@@ -63,3 +63,17 @@
 # Function timeout
 [functions."*"]
   timeout = 30
+
+[[redirects]]
+  from = "/api/notifications/*"
+  to = "/.netlify/functions/api/notifications/:splat"
+  status = 200
+  force = true
+  headers = { X-From = "Netlify", Cache-Control = "no-cache" }
+
+[[redirects]]
+  from = "/api/marketplace-offers"
+  to = "/.netlify/functions/api/marketplace-offers"
+  status = 200
+  force = true
+  headers = { X-From = "Netlify", Cache-Control = "no-cache" }
