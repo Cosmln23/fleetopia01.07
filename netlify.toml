@@ -77,3 +77,17 @@
   status = 200
   force = true
   headers = { X-From = "Netlify", Cache-Control = "no-cache" }
+
+[[redirects]]
+  from = "/api/cargo/*"
+  to = "/.netlify/functions/api/cargo/:splat"
+  status = 200
+  force = true
+  headers = { X-From = "Netlify", Cache-Control = "no-cache" }
+
+[[redirects]]
+  from = "/api/cargo"
+  to = "/.netlify/functions/api/cargo"
+  status = 200
+  force = true
+  headers = { X-From = "Netlify", Cache-Control = "no-cache" }
