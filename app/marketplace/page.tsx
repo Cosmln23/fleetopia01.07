@@ -67,16 +67,18 @@ export default function MarketplacePage() {
   const { setModalOpen } = useStickyNavigation()
 
   // Use SWR for data fetching with revalidation
-  const { data: cargoOffers = [], error, isLoading } = useSWR('/api/marketplace-offers', async (url: string) => {
+  const { data: cargoResponse = {}, error, isLoading } = useSWR('/api/cargo', async (url: string) => {
     const response = await fetch(url)
     if (!response.ok) throw new Error('Failed to fetch cargo offers')
     const data = await response.json()
-    return data.offers || []
+    return data
   }, {
     refreshInterval: 30000, // Refresh every 30 seconds
     revalidateOnFocus: true,
     revalidateOnReconnect: true
   })
+
+  const cargoOffers = cargoResponse.cargo || []
 
   const handleAddCargo = async (cargoData: Omit<CargoOffer, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
@@ -89,7 +91,7 @@ export default function MarketplacePage() {
       
       if (response.ok) {
         // Revalidate SWR cache to fetch fresh data
-        mutate('/api/marketplace-offers')
+        mutate('/api/cargo')
       }
     } catch (error) {
       console.error('Failed to add cargo:', error)
