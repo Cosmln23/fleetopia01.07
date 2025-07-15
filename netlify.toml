@@ -4,7 +4,7 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-  version = "5.22.1"
+  pinned_version = "5.22.1"
 
 [build.environment]
   NODE_ENV = "production"
