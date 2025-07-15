@@ -9,62 +9,15 @@
   NODE_ENV = "production"
   NEXT_TELEMETRY_DISABLED = "1"
 
-# Specific API redirects should come FIRST
-[[redirects]]
-  from = "/api/health"
-  to = "/.netlify/functions/api/health"
-  status = 200
-  force = true
-  headers = { X-From = "Netlify", Cache-Control = "no-cache" }
-
-[[redirects]]
-  from = "/api/cargo"
-  to = "/.netlify/functions/api/cargo"
-  status = 200
-  force = true
-  headers = { X-From = "Netlify", Cache-Control = "no-cache" }
-
-[[redirects]]
-  from = "/api/cargo/*"
-  to = "/.netlify/functions/api/cargo/:splat"
-  status = 200
-  force = true
-  headers = { X-From = "Netlify", Cache-Control = "no-cache" }
-
-[[redirects]]
-  from = "/api/notifications/unread-count"
-  to = "/.netlify/functions/api/notifications/unread-count"
-  status = 200
-  force = true
-  headers = { X-From = "Netlify", Cache-Control = "no-cache" }
-
-[[redirects]]
-  from = "/api/notifications/*"
-  to = "/.netlify/functions/api/notifications/:splat"
-  status = 200
-  force = true
-  headers = { X-From = "Netlify", Cache-Control = "no-cache" }
-
-[[redirects]]
-  from = "/api/marketplace-offers"
-  to = "/.netlify/functions/api/marketplace-offers"
-  status = 200
-  force = true
-  headers = { X-From = "Netlify", Cache-Control = "no-cache" }
-
-# General API fallback - must be LAST
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
-  status = 200
-  force = true
+# The Netlify Next.js plugin handles API routes automatically.
+# Manual redirects are only needed for special cases like WebSockets.
 
 [[redirects]]
   from = "/ws/*"
   to = "/.netlify/functions/socket"
   status = 200
 
-# SPA fallback
+# SPA fallback - this should generally be handled by the plugin, but we keep it as a safety net.
 [[redirects]]
   from = "/*"
   to = "/index.html"
