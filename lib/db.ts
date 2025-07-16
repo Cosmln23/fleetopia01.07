@@ -2,10 +2,10 @@ import { Pool } from 'pg'
 
 // PostgreSQL connection pool
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:FHeFHPzxXbDOSWJHlAHkgCrcMLmEPaeF@interchange.proxy.rlwy.net:42409/railway',
-  ssl: {
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? {
     rejectUnauthorized: false
-  },
+  } : false,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
