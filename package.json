@@ -13,7 +13,8 @@
     "type-check": "tsc --noEmit",
     "test:production": "node scripts/test-production.js",
     "deploy:check": "node scripts/deploy-check.js",
-    "deploy:ready": "npm run deploy:check && npm run test:production"
+    "deploy:ready": "npm run deploy:check && npm run test:production",
+    "migrate": "node scripts/apply-migrations.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.55.1",
