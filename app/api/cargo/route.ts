@@ -139,10 +139,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     
-    // Check role authorization
+    // Check role authorization - allow both provider and carrier to create cargo
     const role = (sessionClaims?.publicMetadata as any)?.role
-    if (role !== 'provider') {
-      return NextResponse.json({ error: 'Forbidden - Only providers can create cargo' }, { status: 403 })
+    if (role && role !== 'provider' && role !== 'carrier') {
+      return NextResponse.json({ error: 'Forbidden - Only providers and carriers can create cargo' }, { status: 403 })
+    }
+    
+    // If no role is set, allow cargo creation (for new users)
+    if (!role) {
+      console.log('ℹ️ User has no role set, allowing cargo creation for onboarding')
     }
     
     // Check trial cargo limit (5 cargo max for trial users)

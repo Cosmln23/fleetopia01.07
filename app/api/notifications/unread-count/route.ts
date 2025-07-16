@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
       FROM notifications
       WHERE user_id = $1
         AND read_at IS NULL
-        AND created_ts > (EXTRACT(EPOCH FROM NOW() - INTERVAL '7 days') * 1000)
+        AND created_at > NOW() - INTERVAL '7 days'
     `, [userId])
 
     const count = parseInt(result.rows[0]?.count || '0')
