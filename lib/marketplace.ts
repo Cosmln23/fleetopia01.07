@@ -97,7 +97,9 @@ export interface CargoListResponse {
 const cargoSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
   type: z.string().min(1, 'Type is required'),
-  urgency: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']),
+  urgency: z.string().transform(val => val.toUpperCase()).refine(val => ['LOW', 'MEDIUM', 'HIGH', 'URGENT'].includes(val), {
+    message: 'Urgency must be LOW, MEDIUM, HIGH, or URGENT'
+  }),
   weight: z.number().min(0.1, 'Weight must be positive'),
   volume: z.number().optional(),
   from_addr: z.string().min(1, 'From address is required'),
