@@ -23,9 +23,18 @@ CREATE INDEX IF NOT EXISTS idx_users_trial_expires_at ON users(trial_expires_at)
 CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
 
 -- Add check constraint for valid status values
-ALTER TABLE users 
-ADD CONSTRAINT IF NOT EXISTS chk_users_status 
-CHECK (status IN ('TRIAL', 'ACTIVE', 'DISABLED', 'SUSPENDED'));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE constraint_name = 'chk_users_status' 
+    AND table_name = 'users'
+  ) THEN
+    ALTER TABLE users 
+    ADD CONSTRAINT chk_users_status 
+    CHECK (status IN ('TRIAL', 'ACTIVE', 'DISABLED', 'SUSPENDED'));
+  END IF;
+END $$;
 
 -- Update verification status logic: verified users should be ACTIVE
 UPDATE users 
