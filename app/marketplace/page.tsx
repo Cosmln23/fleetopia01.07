@@ -4,11 +4,13 @@
 import { formatPrice } from '@/lib/formatters'
 import { useState, useMemo, useEffect } from 'react'
 import AddCargoModal from '@/components/AddCargoModal'
+import DeleteCargoModal from '@/components/DeleteCargoModal'
 import CargoDetailsModal from '@/components/CargoDetailsModal'
 import { CargoOffer, CargoType, UrgencyLevel } from '@/lib/types'
 import { useStickyNavigation } from '@/contexts/StickyNavigationContext'
 import { getCargoDistance, formatDistance } from '@/lib/distanceCalculator'
 import { getGoogleMapsDirURL, buildCompleteAddress } from '@/lib/googleMaps'
+import { useUserRole } from '@/lib/useUserRole'
 import useSWR, { mutate } from 'swr'
 
 // Helper functions moved from mock-data
@@ -53,6 +55,7 @@ const getUrgencyBadgeStyles = (urgency: string) => {
 
 export default function MarketplacePage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isCargoDetailsOpen, setIsCargoDetailsOpen] = useState(false)
   const [selectedCargo, setSelectedCargo] = useState<CargoOffer | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -65,6 +68,7 @@ export default function MarketplacePage() {
     maxPrice: ''
   })
   const { setModalOpen } = useStickyNavigation()
+  const { userId, role, isLoaded } = useUserRole()
 
   // Use SWR for data fetching with revalidation
   const { data: cargoResponse = {}, error, isLoading } = useSWR('/api/cargo', async (url: string) => {
@@ -80,6 +84,17 @@ export default function MarketplacePage() {
 
   const cargoOffers = cargoResponse.cargo || []
 
+  // Check if user has cargo for delete button visibility
+  const { data: userCargoResponse } = useSWR(
+    isLoaded && userId ? '/api/cargo/my-cargo' : null,
+    async (url: string) => {
+      const response = await fetch(url)
+      if (!response.ok) return { cargo: [] }
+      return response.json()
+    }
+  )
+  const hasUserCargo = userCargoResponse?.cargo?.length > 0
+
   const handleAddCargo = async (cargoData: Omit<CargoOffer, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       // Send to API first
@@ -92,10 +107,17 @@ export default function MarketplacePage() {
       if (response.ok) {
         // Revalidate SWR cache to fetch fresh data
         mutate('/api/cargo')
+        mutate('/api/cargo/my-cargo') // Also refresh user cargo
       }
     } catch (error) {
       console.error('Failed to add cargo:', error)
     }
+  }
+
+  const handleDeleteCargo = () => {
+    // Refresh both cargo lists after deletion
+    mutate('/api/cargo')
+    mutate('/api/cargo/my-cargo')
   }
 
   const handleCargoClick = (cargo: CargoOffer) => {
@@ -181,20 +203,43 @@ export default function MarketplacePage() {
               <p className="text-[#adadad] text-sm font-bold leading-normal tracking-[0.015em]">Accepted Offers</p>
             </a>
           </div>
-          <button 
-            onClick={() => {
-              setIsModalOpen(true)
-              setModalOpen(true)
-            }}
-            className="flex items-center gap-2 bg-white hover:bg-gray-100 text-black px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            <div className="text-black" data-icon="Plus" data-size="16px" data-weight="bold">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" fill="currentColor" viewBox="0 0 256 256">
-                <path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path>
-              </svg>
-            </div>
-            Add Cargo
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Delete Cargo Button - Only show if user has cargo and is provider */}
+            {hasUserCargo && role === 'provider' && (
+              <button 
+                onClick={() => {
+                  setIsDeleteModalOpen(true)
+                  setModalOpen(true)
+                }}
+                className="flex items-center gap-2 bg-white hover:bg-gray-100 text-black px-4 py-2 rounded-lg font-medium transition-colors"
+              >
+                <div className="text-black" data-icon="Trash" data-size="16px" data-weight="bold">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" fill="currentColor" viewBox="0 0 256 256">
+                    <path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z"></path>
+                  </svg>
+                </div>
+                Delete Cargo
+              </button>
+            )}
+            
+            {/* Add Cargo Button - Only show for providers */}
+            {role === 'provider' && (
+              <button 
+                onClick={() => {
+                  setIsModalOpen(true)
+                  setModalOpen(true)
+                }}
+                className="flex items-center gap-2 bg-white hover:bg-gray-100 text-black px-4 py-2 rounded-lg font-medium transition-colors"
+              >
+                <div className="text-black" data-icon="Plus" data-size="16px" data-weight="bold">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" fill="currentColor" viewBox="0 0 256 256">
+                    <path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path>
+                  </svg>
+                </div>
+                Add Cargo
+              </button>
+            )}
+          </div>
         </div>
       </div>
       <div className="px-4 py-3">
@@ -424,6 +469,16 @@ export default function MarketplacePage() {
           setModalOpen(false)
         }}
         onSubmit={handleAddCargo}
+      />
+
+      {/* Delete Cargo Modal */}
+      <DeleteCargoModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false)
+          setModalOpen(false)
+        }}
+        onDelete={handleDeleteCargo}
       />
 
       {/* Cargo Details Modal */}
