@@ -1,158 +1,100 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { query } from '@/lib/db'
 import { auth } from '@clerk/nextjs/server'
 import { getCargoDetails, getCargoOffers, updateCargoStatus } from '@/lib/marketplace'
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+// GET single cargo
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const result = await query(
+      'SELECT * FROM cargo WHERE id = $1',
+      [params.id]
+    )
+
+    if (result.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Cargo not found' },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      cargo: result.rows[0]
+    })
+  } catch (error) {
+    console.error('Error fetching cargo:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch cargo' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE cargo (only by owner)
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const { userId } = await auth()
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const cargoId = params.id
+    // First check if cargo exists and user is the owner
+    const cargoResult = await query(
+      'SELECT * FROM cargo WHERE id = $1',
+      [params.id]
+    )
+
+    if (cargoResult.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Cargo not found' },
+        { status: 404 }
+      )
+    }
+
+    const cargo = cargoResult.rows[0]
     
-    // Get cargo details using marketplace service
-    const cargo = await getCargoDetails(cargoId)
+    // Check if user is the owner (assuming we have a user_id or sender_id field)
+    // You might need to adjust this based on your actual schema
+    const userResult = await query(
+      'SELECT clerk_id FROM users WHERE name = $1 OR clerk_id = $2',
+      [cargo.provider_name, userId]
+    )
 
-    if (!cargo) {
-      return NextResponse.json({ error: 'Cargo not found' }, { status: 404 })
+    const isOwner = userResult.rows.some(user => user.clerk_id === userId) || 
+                   cargo.provider_name === userId // fallback check
+
+    if (!isOwner) {
+      return NextResponse.json(
+        { error: 'Not authorized to delete this cargo' },
+        { status: 403 }
+      )
     }
 
-    // Get offers for this cargo
-    const offers = await getCargoOffers(cargoId)
+    // Delete related records first (cascade should handle this, but being explicit)
+    await query('DELETE FROM offer_requests WHERE cargo_id = $1', [params.id])
+    await query('DELETE FROM chat_messages WHERE cargo_id = $1', [params.id])
 
-    // Transform to maintain backward compatibility
-    const transformedCargo = {
-      id: cargo.id,
-      title: cargo.title,
-      weight: cargo.weight,
-      volume: cargo.volume,
-      cargoType: cargo.type,
-      urgency: cargo.urgency,
-      fromAddress: cargo.from_addr,
-      fromCity: cargo.from_city || '',
-      fromPostal: cargo.from_postal || '',
-      fromCountry: cargo.from_country,
-      toAddress: cargo.to_addr,
-      toCity: cargo.to_city || '',
-      toPostal: cargo.to_postal || '',
-      toCountry: cargo.to_country,
-      fromLat: cargo.from_lat,
-      fromLng: cargo.from_lng,
-      toLat: cargo.to_lat,
-      toLng: cargo.to_lng,
-      loadingDate: cargo.load_date,
-      deliveryDate: cargo.delivery_date,
-      price: cargo.price,
-      pricePerKg: cargo.price_per_kg,
-      provider: cargo.provider_name,
-      providerStatus: cargo.provider_status,
-      status: cargo.status,
-      postingDate: cargo.posting_date,
-      createdAt: cargo.created_ts,
-      updatedAt: cargo.updated_ts,
-      offers: offers.map(offer => ({
-        id: offer.id,
-        transporterId: offer.transporter_id,
-        transporterName: offer.transporter_name,
-        transporterCompany: offer.transporter_company,
-        proposedPrice: offer.proposed_price,
-        message: offer.message,
-        status: offer.status,
-        createdAt: offer.created_ts
-      }))
-    }
+    // Delete the cargo
+    await query('DELETE FROM cargo WHERE id = $1', [params.id])
 
     return NextResponse.json({
-      cargo: transformedCargo,
-      _meta: {
-        timestamp: new Date().toISOString(),
-        source: 'live_database',
-        userId: userId
-      }
+      success: true,
+      message: 'Cargo deleted successfully'
     })
-
   } catch (error) {
-    console.error('❌ API: GET /api/cargo/[id] error:', error)
-    return NextResponse.json({ error: 'Failed to fetch cargo' }, { status: 500 })
+    console.error('Error deleting cargo:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete cargo' },
+      { status: 500 }
+    )
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    const { userId, sessionClaims } = await auth()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const cargoId = params.id
-    const body = await req.json()
-
-    // Check if cargo exists
-    const cargo = await getCargoDetails(cargoId)
-    if (!cargo) {
-      return NextResponse.json({ error: 'Cargo not found' }, { status: 404 })
-    }
-
-    // Only allow status updates for now
-    if (body.status) {
-      const validStatuses = ['NEW', 'OPEN', 'TAKEN', 'IN_PROGRESS', 'COMPLETED']
-      if (!validStatuses.includes(body.status)) {
-        return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
-      }
-      
-      const success = await updateCargoStatus(cargoId, body.status)
-      if (!success) {
-        return NextResponse.json({ error: 'Failed to update cargo status' }, { status: 500 })
-      }
-      
-      // Get updated cargo details
-      const updatedCargo = await getCargoDetails(cargoId)
-      
-      return NextResponse.json({
-        cargo: {
-          id: updatedCargo!.id,
-          title: updatedCargo!.title,
-          weight: updatedCargo!.weight,
-          volume: updatedCargo!.volume,
-          cargoType: updatedCargo!.type,
-          urgency: updatedCargo!.urgency,
-          fromAddress: updatedCargo!.from_addr,
-          fromCity: updatedCargo!.from_city || '',
-          fromPostal: updatedCargo!.from_postal || '',
-          fromCountry: updatedCargo!.from_country,
-          toAddress: updatedCargo!.to_addr,
-          toCity: updatedCargo!.to_city || '',
-          toPostal: updatedCargo!.to_postal || '',
-          toCountry: updatedCargo!.to_country,
-          fromLat: updatedCargo!.from_lat,
-          fromLng: updatedCargo!.from_lng,
-          toLat: updatedCargo!.to_lat,
-          toLng: updatedCargo!.to_lng,
-          loadingDate: updatedCargo!.load_date,
-          deliveryDate: updatedCargo!.delivery_date,
-          price: updatedCargo!.price,
-          pricePerKg: updatedCargo!.price_per_kg,
-          provider: updatedCargo!.provider_name,
-          providerStatus: updatedCargo!.provider_status,
-          status: updatedCargo!.status,
-          postingDate: updatedCargo!.posting_date,
-          createdAt: updatedCargo!.created_ts,
-          updatedAt: updatedCargo!.updated_ts
-        },
-        _meta: {
-          timestamp: new Date().toISOString(),
-          source: 'live_database',
-          userId: userId,
-          action: 'status_update'
-        }
-      })
-    }
-
-    return NextResponse.json({ error: 'No valid updates provided' }, { status: 400 })
-
-  } catch (error) {
-    console.error('❌ API: PATCH /api/cargo/[id] error:', error)
-    return NextResponse.json({ error: 'Failed to update cargo' }, { status: 500 })
-  }
-}
+export const dynamic = 'force-dynamic'

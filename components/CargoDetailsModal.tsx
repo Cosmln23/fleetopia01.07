@@ -34,7 +34,7 @@ export default function CargoDetailsModal({
   const [negotiationStatus, setNegotiationStatus] = useState<'initial' | 'quote_sent' | 'negotiating' | 'accepted' | 'rejected'>('initial')
 
   // Check if current user is the cargo owner
-  const isOwner = user && cargo && cargo.sender && user.id === cargo.sender.id
+  const isOwner = Boolean(user && cargo && cargo.sender && user.id === cargo.sender.id)
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -130,6 +130,37 @@ export default function CargoDetailsModal({
     }
   }
 
+  const handleDeleteCargo = async () => {
+    if (isSubmitting) return
+    
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this cargo listing? This action cannot be undone.'
+    )
+    
+    if (!confirmed) return
+    
+    setIsSubmitting(true)
+    try {
+      const response = await fetch(`/api/cargo/${cargo.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      
+      if (response.ok) {
+        onClose()
+        // Refresh the page to update the cargo list
+        window.location.reload()
+      } else {
+        throw new Error('Failed to delete cargo')
+      }
+    } catch (error) {
+      console.error('Failed to delete cargo:', error)
+      alert('Failed to delete cargo. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       onClose()
@@ -151,15 +182,32 @@ export default function CargoDetailsModal({
             postedAt={cargo.postingDate}
             providerName={cargo.provider}
           />
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 text-[#adadad] hover:text-white transition-colors p-2 hover:bg-[#2d2d2d] rounded-lg"
-            aria-label="Close modal"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="absolute top-4 right-4 flex gap-2">
+            {/* Delete button - only for cargo owner */}
+            {isOwner && (
+              <button
+                onClick={() => handleDeleteCargo()}
+                className="text-red-400 hover:text-red-300 transition-colors p-2 hover:bg-red-900/20 rounded-lg"
+                aria-label="Delete cargo"
+                title="Delete this cargo listing"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            )}
+            
+            {/* Close button */}
+            <button
+              onClick={onClose}
+              className="text-[#adadad] hover:text-white transition-colors p-2 hover:bg-[#2d2d2d] rounded-lg"
+              aria-label="Close modal"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
         
         {/* Title Header */}
