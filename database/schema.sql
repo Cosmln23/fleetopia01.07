@@ -106,6 +106,19 @@ CREATE TABLE IF NOT EXISTS verification_requests (
   FOREIGN KEY (user_id) REFERENCES users(clerk_id)
 );
 
+-- Chat Messages Table for HTTP polling fallback
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id TEXT PRIMARY KEY,
+  cargo_id TEXT NOT NULL,
+  sender_id TEXT NOT NULL,
+  sender_name TEXT NOT NULL,
+  content TEXT NOT NULL,
+  message_type TEXT DEFAULT 'text',
+  price_amount REAL,
+  created_ts BIGINT NOT NULL,
+  FOREIGN KEY (cargo_id) REFERENCES cargo(id) ON DELETE CASCADE
+);
+
 -- Fleet Management Tables
 CREATE TABLE IF NOT EXISTS vehicles (
   id TEXT PRIMARY KEY,
@@ -148,6 +161,8 @@ CREATE INDEX IF NOT EXISTS idx_users_profile_completed ON users(profile_complete
 CREATE INDEX IF NOT EXISTS idx_users_vat_number ON users(vat_number);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_cargo ON chat_messages(cargo_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_created ON chat_messages(created_ts);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_read_at ON notifications(read_at);
 CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type);

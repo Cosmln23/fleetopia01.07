@@ -68,8 +68,13 @@ function startHttpPolling() {
   
   pollingInterval = setInterval(async () => {
     try {
+      const currentCargoId = getCurrentCargoId() // Get current cargo from URL or state
+      if (!currentCargoId) return
+      
+      const lastMessageId = getLastMessageId()
+      
       // Poll for new messages
-      const response = await fetch('/api/messages/poll', {
+      const response = await fetch(`/api/messages/poll?cargoId=${currentCargoId}&lastMessageId=${lastMessageId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       })
@@ -79,7 +84,14 @@ function startHttpPolling() {
         // Emit events like WebSocket would
         if (data.messages?.length > 0) {
           data.messages.forEach((msg: any) => {
-            emitEvent('message', msg)
+            emitEvent('chat-message', { cargoId: currentCargoId, message: msg })
+            updateLastMessageId(msg.id)
+          })
+        }
+        
+        if (data.quoteUpdates?.length > 0) {
+          data.quoteUpdates.forEach((quote: any) => {
+            emitEvent('quote-update', quote)
           })
         }
       }
@@ -87,6 +99,38 @@ function startHttpPolling() {
       console.warn('⚠️ Polling error:', error)
     }
   }, 2000) // Poll every 2 seconds
+}
+
+// Helper functions for tracking state
+let currentCargoId: string | null = null
+let lastMessageId: string = '0'
+
+function getCurrentCargoId(): string | null {
+  // Try to get from URL first
+  if (typeof window !== 'undefined') {
+    const path = window.location.pathname
+    const cargoMatch = path.match(/\/marketplace\/([^\/]+)/)
+    if (cargoMatch) {
+      currentCargoId = cargoMatch[1]
+      return currentCargoId
+    }
+  }
+  return currentCargoId
+}
+
+function getLastMessageId(): string {
+  return lastMessageId
+}
+
+function updateLastMessageId(messageId: string): void {
+  if (parseInt(messageId) > parseInt(lastMessageId)) {
+    lastMessageId = messageId
+  }
+}
+
+export function setCurrentCargoId(cargoId: string): void {
+  currentCargoId = cargoId
+  lastMessageId = '0' // Reset when switching cargo
 }
 
 // Event listeners storage for polling mode
