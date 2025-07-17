@@ -2,6 +2,8 @@
 
 **Enterprise-grade transport marketplace platform with AI-powered features**
 
+<!-- Deployment trigger: WebSocket fixes for Vercel compatibility -->
+
 ## 🚀 Quick Start
 
 ```bash
