@@ -33,8 +33,8 @@ export default function ChatPanel({ cargoId, onQuoteSent, suggestedPrice, isOwne
     quoteUpdate,
     negotiationStatus,
     sendQuote: wsSendQuote,
-    sendChatMessage: wsSendChatMessage,
-    handleNegotiationAction: wsHandleNegotiationAction,
+    sendMessage: wsSendMessage,
+    handleNegotiation: wsHandleNegotiation,
     error: wsError
   } = useWebSocket(cargoId)
   
@@ -146,8 +146,8 @@ export default function ChatPanel({ cargoId, onQuoteSent, suggestedPrice, isOwne
     setMessages(prev => [...prev, userMessage])
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Send message using real WebSocket/polling system
+      wsSendMessage(messageToSend, 'text')
       
       // Update message status to sent
       setMessages(prev => 
@@ -158,21 +158,8 @@ export default function ChatPanel({ cargoId, onQuoteSent, suggestedPrice, isOwne
         )
       )
 
-      // Simulate shipper response after a delay
-      setTimeout(() => {
-        const shipperResponse: Message = {
-          id: (Date.now() + 1).toString(),
-          content: 'Thank you for your interest! The cargo needs to be delivered by the specified date. Are you able to handle this?',
-          senderId: 'shipper-123',
-          senderType: 'shipper',
-          messageType: 'text',
-          timestamp: new Date().toISOString(),
-          status: 'sent'
-        }
-        setMessages(prev => [...prev, shipperResponse])
-      }, 2000)
-
     } catch (error) {
+      console.error('Failed to send message:', error)
       // Update message status to failed
       setMessages(prev => 
         prev.map(msg => 
@@ -205,8 +192,8 @@ export default function ChatPanel({ cargoId, onQuoteSent, suggestedPrice, isOwne
     setMessages(prev => [...prev, quoteMessage])
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Send quote using real WebSocket/polling system
+      wsSendQuote(amount, `Quote for €${amount}`)
       
       // Update message status to sent
       setMessages(prev => 
@@ -219,21 +206,6 @@ export default function ChatPanel({ cargoId, onQuoteSent, suggestedPrice, isOwne
       
       // Call parent callback
       onQuoteSent?.(amount)
-      
-      // Simulate shipper response with actions
-      setTimeout(() => {
-        const shipperResponse: Message = {
-          id: (Date.now() + 1).toString(),
-          content: `Received €${amount}`,
-          senderId: 'shipper-123',
-          senderType: 'shipper',
-          messageType: 'text',
-          timestamp: new Date().toISOString(),
-          status: 'sent',
-          actions: ['accept', 'reject', 'counter']
-        }
-        setMessages(prev => [...prev, shipperResponse])
-      }, 1500)
       
     } catch (error) {
       setMessages(prev => 

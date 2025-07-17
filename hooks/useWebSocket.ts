@@ -67,6 +67,7 @@ export const useWebSocket = (cargoId?: string) => {
 
         onSocketEvent('chat-message', (data: { cargoId: string, message: WebSocketMessage }) => {
           if (data.cargoId === cargoId) {
+            // Only add messages from OTHER users, not from current user
             setMessages(prev => [...prev, data.message])
           }
         })
