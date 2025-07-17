@@ -10,6 +10,7 @@ import ChatPanel from './CargoDetailsModal/ChatPanel'
 import CostBreakdown from './CargoDetailsModal/CostBreakdown'
 import QuoteStatus from './CargoDetailsModal/QuoteStatus'
 import SenderHeader from './CargoDetailsModal/SenderHeader'
+import { useGlobalChat } from '@/hooks/useGlobalChat'
 
 interface CargoDetailsModalProps {
   isOpen: boolean
@@ -27,6 +28,7 @@ export default function CargoDetailsModal({
   onIgnore
 }: CargoDetailsModalProps) {
   const { user } = useUser()
+  const { startChatWithCargoOwner } = useGlobalChat()
   const [showChat, setShowChat] = useState(false)
   const [showCostBreakdown, setShowCostBreakdown] = useState(false)
   const [customPrice, setCustomPrice] = useState('')
@@ -388,7 +390,27 @@ export default function CargoDetailsModal({
             )}
             
             <button
-              onClick={() => setShowChat(!showChat)}
+              onClick={async () => {
+                if (!isOwner && cargo.sender?.id) {
+                  // For non-owners, create global conversation
+                  const conversationId = await startChatWithCargoOwner(
+                    cargo.id,
+                    cargo.provider,
+                    cargo.sender.id
+                  )
+                  if (conversationId) {
+                    // Close modal and let global chat widget handle the conversation
+                    onClose()
+                    // Trigger global chat to open this conversation
+                    window.dispatchEvent(new CustomEvent('openGlobalChat', { 
+                      detail: { conversationId } 
+                    }))
+                  }
+                } else {
+                  // For owners, toggle local chat panel
+                  setShowChat(!showChat)
+                }
+              }}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
             >
               {isOwner ? 'View Messages' : 'Chat with shipper'}

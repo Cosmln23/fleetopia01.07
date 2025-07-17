@@ -173,3 +173,30 @@ CREATE INDEX IF NOT EXISTS idx_verification_requests_status ON verification_requ
 CREATE INDEX IF NOT EXISTS idx_offer_status ON offer_requests(status);
 CREATE INDEX IF NOT EXISTS idx_vehicles_gps_device ON vehicles(gps_device_id);
 CREATE INDEX IF NOT EXISTS idx_gps_devices_assigned ON gps_devices(assigned);
+
+-- Global Chat Conversations Table
+CREATE TABLE IF NOT EXISTS conversations (
+  id TEXT PRIMARY KEY,
+  participant1_id TEXT NOT NULL,
+  participant1_name TEXT NOT NULL,
+  participant1_avatar TEXT,
+  participant2_id TEXT NOT NULL,
+  participant2_name TEXT NOT NULL,
+  participant2_avatar TEXT,
+  cargo_id TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  FOREIGN KEY (cargo_id) REFERENCES cargo(id) ON DELETE SET NULL
+);
+
+-- Update chat_messages table to support conversations
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS conversation_id TEXT;
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS read BOOLEAN DEFAULT false;
+
+-- Add indexes for conversation support
+CREATE INDEX IF NOT EXISTS idx_conversations_participant1 ON conversations(participant1_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_participant2 ON conversations(participant2_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_cargo ON conversations(cargo_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_updated ON conversations(updated_at);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation ON chat_messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_read ON chat_messages(read);

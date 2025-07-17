@@ -6,6 +6,7 @@ import QueryProvider from '@/contexts/QueryProvider'
 import FullNavigationBar from '@/components/FullNavigationBar'
 import NotificationsDropdown from '@/components/NotificationsDropdown'
 import TrialBanner from '@/components/TrialBanner'
+import GlobalChatWidget from '@/components/GlobalChatWidget'
 import { getUnreadNotificationsCount } from '@/lib/communication-data'
 import { UserButton } from '@clerk/nextjs'
 
@@ -104,6 +105,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           
           {/* Communication System */}
           <NotificationsDropdown isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} />
+          
+          {/* Global Chat Widget */}
+          <GlobalChatWidget />
         </div>
       </div>
     </>
