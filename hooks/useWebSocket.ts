@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { io, Socket } from 'socket.io-client'
+import { useEffect, useState } from 'react'
+import { initializeSocket, onSocketEvent, emitSocketEvent, disconnectSocket } from '@/lib/websocket'
 
 interface WebSocketMessage {
   id: string
@@ -25,186 +25,131 @@ interface NegotiationStatus {
 }
 
 export const useWebSocket = (cargoId?: string) => {
-  const [socket, setSocket] = useState<Socket | null>(null)
   const [connected, setConnected] = useState(false)
   const [messages, setMessages] = useState<WebSocketMessage[]>([])
   const [quoteUpdate, setQuoteUpdate] = useState<QuoteUpdate | null>(null)
   const [negotiationStatus, setNegotiationStatus] = useState<NegotiationStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
-  
-  const socketRef = useRef<Socket | null>(null)
 
   useEffect(() => {
-    // Initialize socket connection
-    const initSocket = () => {
+    // Initialize smart socket with Vercel fallback
+    const initConnection = async () => {
       try {
-        const wsUrl = window.location.origin; // Force relative to current domain to fix mismatch
-        const newSocket = io(wsUrl, {
-          path: '/api/socket',
-          transports: ['websocket', 'polling'],
-          upgrade: true,
-          rememberUpgrade: true,
-          timeout: 20000,
-          reconnection: true,
-          reconnectionAttempts: 5,
-          reconnectionDelay: 1000,
-          reconnectionDelayMax: 5000
-        })
-
-        newSocket.on('connect', () => {
-          console.log('WebSocket connected:', newSocket.id)
+        console.log('🔌 Initializing smart WebSocket connection...')
+        
+        // Use the new fallback system
+        await initializeSocket()
+        setConnected(true)
+        setError(null)
+        
+        // Set up event listeners using the fallback-aware system
+        onSocketEvent('connect', () => {
+          console.log('✅ Connection established (WebSocket or HTTP polling)')
           setConnected(true)
           setError(null)
           
           // Join cargo room if cargoId provided
           if (cargoId) {
-            newSocket.emit('join-cargo', cargoId)
+            emitSocketEvent('join-cargo', cargoId)
           }
         })
 
-        newSocket.on('disconnect', () => {
-          console.log('WebSocket disconnected')
+        onSocketEvent('disconnect', () => {
+          console.log('❌ Connection disconnected')
           setConnected(false)
         })
 
-        newSocket.on('connect_error', (error) => {
-          console.error('WebSocket connection error:', error)
-          setError(error.message)
-          setConnected(false)
+        onSocketEvent('connect_error', (error: any) => {
+          console.warn('⚠️ Connection error, using fallback:', error)
+          // Don't treat fallback as error
+          setConnected(true)
         })
 
-        newSocket.on('error', (error) => {
-          console.error('WebSocket error:', error)
-          setError(error.message)
-        })
-
-        // Handle chat messages
-        newSocket.on('chat-message', (data: { cargoId: string; message: WebSocketMessage }) => {
+        onSocketEvent('chat-message', (data: { cargoId: string, message: WebSocketMessage }) => {
           if (data.cargoId === cargoId) {
             setMessages(prev => [...prev, data.message])
           }
         })
 
-        // Handle quote updates
-        newSocket.on('quote-update', (data: QuoteUpdate) => {
+        onSocketEvent('quote-update', (data: QuoteUpdate) => {
           if (data.cargoId === cargoId) {
             setQuoteUpdate(data)
           }
         })
 
-        // Handle negotiation status
-        newSocket.on('negotiation-status', (data: NegotiationStatus) => {
+        onSocketEvent('negotiation-status', (data: NegotiationStatus) => {
           if (data.cargoId === cargoId) {
             setNegotiationStatus(data)
           }
         })
 
-        // Handle notifications
-        newSocket.on('notification', (data: any) => {
-          console.log('Notification received:', data)
-          // You can handle notifications here
-        })
-
-        socketRef.current = newSocket
-        setSocket(newSocket)
-
-        return newSocket
       } catch (error) {
-        console.error('Failed to initialize WebSocket:', error)
-        setError('Failed to connect to WebSocket server')
-        return null
+        console.error('❌ Failed to initialize connection:', error)
+        setError('Connection failed')
+        setConnected(false)
       }
     }
 
-    const socketInstance = initSocket()
+    initConnection()
 
     // Cleanup on unmount
     return () => {
-      if (socketInstance) {
-        if (cargoId) {
-          socketInstance.emit('leave-cargo', cargoId)
-        }
-        socketInstance.disconnect()
+      if (cargoId) {
+        emitSocketEvent('leave-cargo', cargoId)
       }
+      disconnectSocket()
     }
   }, [cargoId])
 
-  // Send quote
+  // Send message function
+  const sendMessage = (content: string, messageType: WebSocketMessage['messageType'] = 'text', priceAmount?: number) => {
+    if (!cargoId) return
+
+    const messageData = {
+      cargoId,
+      content,
+      messageType,
+      priceAmount
+    }
+
+    emitSocketEvent('send-chat-message', messageData)
+  }
+
+  // Send quote function
   const sendQuote = (price: number, message?: string) => {
-    if (socket && connected && cargoId) {
-      socket.emit('send-quote', {
-        cargoId,
-        price,
-        message
-      })
-    } else {
-      console.error('Cannot send quote: WebSocket not connected or cargoId missing')
+    if (!cargoId) return
+
+    const quoteData = {
+      cargoId,
+      price,
+      message
     }
+
+    emitSocketEvent('send-quote', quoteData)
   }
 
-  // Send chat message
-  const sendChatMessage = (
-    content: string, 
-    messageType: 'text' | 'quote' | 'counter' | 'accept' | 'reject' = 'text',
-    priceAmount?: number
-  ) => {
-    if (socket && connected && cargoId) {
-      socket.emit('send-chat-message', {
-        cargoId,
-        content,
-        messageType,
-        priceAmount
-      })
-    } else {
-      console.error('Cannot send message: WebSocket not connected or cargoId missing')
-    }
-  }
+  // Negotiation action function
+  const handleNegotiation = (action: 'accept' | 'reject' | 'counter', quoteId: string, counterPrice?: number) => {
+    if (!cargoId) return
 
-  // Handle negotiation action
-  const handleNegotiationAction = (
-    action: 'accept' | 'reject' | 'counter',
-    quoteId: string,
-    counterPrice?: number
-  ) => {
-    if (socket && connected && cargoId) {
-      socket.emit('negotiation-action', {
-        cargoId,
-        action,
-        quoteId,
-        counterPrice
-      })
-    } else {
-      console.error('Cannot handle negotiation action: WebSocket not connected or cargoId missing')
+    const actionData = {
+      cargoId,
+      action,
+      quoteId,
+      counterPrice
     }
-  }
 
-  // Join different cargo room
-  const joinCargo = (newCargoId: string) => {
-    if (socket && connected) {
-      if (cargoId) {
-        socket.emit('leave-cargo', cargoId)
-      }
-      socket.emit('join-cargo', newCargoId)
-    }
+    emitSocketEvent('negotiation-action', actionData)
   }
 
   return {
-    socket,
     connected,
     messages,
     quoteUpdate,
     negotiationStatus,
     error,
+    sendMessage,
     sendQuote,
-    sendChatMessage,
-    handleNegotiationAction,
-    joinCargo,
-    // Utility functions
-    clearMessages: () => setMessages([]),
-    clearQuoteUpdate: () => setQuoteUpdate(null),
-    clearNegotiationStatus: () => setNegotiationStatus(null),
-    clearError: () => setError(null)
+    handleNegotiation
   }
 }
-
-export default useWebSocket
