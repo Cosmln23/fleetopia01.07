@@ -34,7 +34,24 @@ export default function CargoDetailsModal({
   const [negotiationStatus, setNegotiationStatus] = useState<'initial' | 'quote_sent' | 'negotiating' | 'accepted' | 'rejected'>('initial')
 
   // Check if current user is the cargo owner
-  const isOwner = Boolean(user && cargo && cargo.sender && user.id === cargo.sender.id)
+  // Use provider name or user full name comparison since sender might not be populated
+  const isOwner = Boolean(
+    user && cargo && (
+      cargo.provider === user.fullName ||
+      cargo.provider === `${user.firstName} ${user.lastName}`.trim() ||
+      (cargo.sender && user.id === cargo.sender.id)
+    )
+  )
+
+  // Debug logging
+  console.log('🔍 Delete button debug:', {
+    hasUser: !!user,
+    hasCargo: !!cargo,
+    userFullName: user?.fullName,
+    userFirstLast: user ? `${user.firstName} ${user.lastName}`.trim() : null,
+    cargoProvider: cargo?.provider,
+    isOwner
+  })
 
   // Reset state when modal opens/closes
   useEffect(() => {
