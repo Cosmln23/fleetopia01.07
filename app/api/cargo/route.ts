@@ -75,6 +75,32 @@ export async function GET(req: NextRequest) {
     // Get cargo data using marketplace service
     const result = await listCargo(filters, pagination)
     
+    // Get sender info for each cargo to populate sender field
+    const cargoIds = result.cargo.map(c => c.id)
+    let senderInfo: Record<string, any> = {}
+    
+    if (cargoIds.length > 0) {
+      const senderResult = await query(`
+        SELECT c.id as cargo_id, u.clerk_id, u.name, u.email, u.avatar, u.company, u.verified, u.rating
+        FROM cargo c
+        LEFT JOIN users u ON c.sender_id = u.clerk_id OR u.name = c.provider_name
+        WHERE c.id = ANY($1)
+      `, [cargoIds])
+      
+      senderInfo = senderResult.rows.reduce((acc: Record<string, any>, row: any) => {
+        acc[row.cargo_id] = {
+          id: row.clerk_id,
+          name: row.name,
+          email: row.email,
+          avatar: row.avatar,
+          company: row.company,
+          verified: row.verified || false,
+          rating: row.rating || 0
+        }
+        return acc
+      }, {})
+    }
+
     // Transform to maintain backward compatibility
     const transformedCargo = result.cargo.map(cargo => ({
       id: cargo.id,
@@ -104,7 +130,8 @@ export async function GET(req: NextRequest) {
       status: cargo.status,
       postingDate: cargo.posting_date,
       createdAt: cargo.created_ts,
-      updatedAt: cargo.updated_ts
+      updatedAt: cargo.updated_ts,
+      sender: senderInfo[cargo.id] || null
     }))
 
     return NextResponse.json({
@@ -216,7 +243,8 @@ export async function POST(req: NextRequest) {
       price_per_kg: body.pricePerKg ? parseFloat(body.pricePerKg) : undefined,
       provider_name: userInfo.name || userInfo.company || body.provider || 'Unknown Provider',
       provider_status: 'ACTIVE',
-      posting_date: new Date().toISOString().split('T')[0]
+      posting_date: new Date().toISOString().split('T')[0],
+      sender_id: userId // Store Clerk user ID as sender
     }
     
     // Create cargo using marketplace service

@@ -325,7 +325,7 @@ export async function createCargo(cargoData: Omit<Cargo, 'id' | 'created_ts' | '
         from_lat, from_lng, to_lat, to_lng,
         load_date, delivery_date, price, price_per_kg,
         provider_name, provider_status, status,
-        created_ts, updated_ts, posting_date
+        created_ts, updated_ts, posting_date, sender_id
       ) VALUES (
         $1, $2, $3, $4, $5, $6,
         $7, $8, $9, $10,
@@ -333,7 +333,7 @@ export async function createCargo(cargoData: Omit<Cargo, 'id' | 'created_ts' | '
         $15, $16, $17, $18,
         $19, $20, $21, $22,
         $23, $24, 'NEW',
-        $25, $26, $27
+        $25, $26, $27, $28
       ) RETURNING *
     `, [
       cargoId, validatedData.title, validatedData.type, validatedData.urgency, 
@@ -343,7 +343,7 @@ export async function createCargo(cargoData: Omit<Cargo, 'id' | 'created_ts' | '
       validatedData.from_lat, validatedData.from_lng, validatedData.to_lat, validatedData.to_lng,
       validatedData.load_date, validatedData.delivery_date, validatedData.price, validatedData.price_per_kg,
       validatedData.provider_name, validatedData.provider_status,
-      now, now, new Date().toISOString().split('T')[0]
+      now, now, new Date().toISOString().split('T')[0], (validatedData as any).sender_id
     ])
     
     console.log('✅ Marketplace: createCargo success', { cargoId })
