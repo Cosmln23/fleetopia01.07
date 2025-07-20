@@ -152,35 +152,49 @@ export default function CargoDetailsModal({
   }
 
   const handleDeleteCargo = async () => {
-    if (isSubmitting) return
+    if (!cargo?.id || !isOwner) return
     
-    const confirmed = window.confirm(
-      'Are you sure you want to delete this cargo listing? This action cannot be undone.'
-    )
+    // Confirm deletion
+    if (!confirm('Are you sure you want to delete this cargo? This action cannot be undone.')) {
+      return
+    }
     
-    if (!confirmed) return
+    console.log('🗑️ Deleting cargo:', cargo.id)
     
-    setIsSubmitting(true)
     try {
+      setIsSubmitting(true)
+      
       const response = await fetch(`/api/cargo/${cargo.id}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json'
+        }
       })
       
+      const result = await response.json()
+      
       if (response.ok) {
+        console.log('✅ Cargo deleted successfully:', result)
+        // Close modal and refresh cargo list
         onClose()
         // Refresh the page to update the cargo list
-        window.location.reload()
+        if (window.location.pathname === '/marketplace') {
+          window.location.reload()
+        }
       } else {
-        throw new Error('Failed to delete cargo')
+        console.error('❌ Failed to delete cargo:', result)
+        alert(result.error || 'Failed to delete cargo')
       }
+      
     } catch (error) {
-      console.error('Failed to delete cargo:', error)
-      alert('Failed to delete cargo. Please try again.')
+      console.error('❌ Delete cargo error:', error)
+      alert('Failed to delete cargo')
     } finally {
       setIsSubmitting(false)
     }
   }
+
+
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -389,6 +403,16 @@ export default function CargoDetailsModal({
                   Ignore
                 </button>
               </>
+            )}
+            
+            {isOwner && (
+              <button
+                onClick={handleDeleteCargo}
+                disabled={isSubmitting}
+                className="bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              >
+                {isSubmitting ? 'Deleting...' : 'Delete Cargo'}
+              </button>
             )}
             
             <button

@@ -10,7 +10,7 @@ async function addCurrentUser() {
     console.log('🔧 Adding current user to users table...')
     
     // Get your Clerk user ID - you'll need to replace this with your actual Clerk user ID
-    const CLERK_USER_ID = 'user_2nGiuQHjOSkzNsS20GPOPzRMHUu' // Replace with your actual Clerk ID
+    const CLERK_USER_ID = 'user_2yq0ZZxXMlU0UMrOY0R9jeT8vDB' // Your actual Clerk ID
     
     // Check if user already exists
     const existingUser = await pool.query(
