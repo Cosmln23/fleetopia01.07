@@ -94,16 +94,6 @@ export default function MarketplacePage() {
     }
   )
   const hasUserCargo = userCargoResponse?.cargo?.length > 0
-  
-  // Debug console pentru buttons
-  console.log('🔍 Button Debug:', {
-    isLoaded,
-    userId, 
-    role,
-    hasUserCargo,
-    userCargoLength: userCargoResponse?.cargo?.length || 0,
-    userCargoResponse
-  })
 
   const handleAddCargo = async (cargoData: Omit<CargoOffer, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
