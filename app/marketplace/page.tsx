@@ -214,12 +214,16 @@ export default function MarketplacePage() {
             </a>
           </div>
           <div className="flex items-center gap-3">
-            {/* Delete Cargo Button - Only show if user has cargo and is provider */}
-            {isLoaded && hasUserCargo && role === 'provider' && (
+            {/* Delete Cargo Button - Always visible */}
+            {isLoaded && (
               <button 
                 onClick={() => {
-                  setIsDeleteModalOpen(true)
-                  setModalOpen(true)
+                  // Check if user has cargo before opening modal
+                  if (hasUserCargo) {
+                    setIsDeleteModalOpen(true)
+                    setModalOpen(true)
+                  }
+                  // If no cargo, do nothing (silent)
                 }}
                 className="flex items-center gap-2 bg-white hover:bg-gray-100 text-black px-4 py-2 rounded-lg font-medium transition-colors"
               >
