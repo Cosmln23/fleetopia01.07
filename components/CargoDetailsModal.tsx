@@ -38,6 +38,19 @@ export default function CargoDetailsModal({
   // Check if current user is the cargo owner
   // Use provider name or user full name comparison since sender might not be populated
   const isOwner = user && cargo && cargo.sender && user.id === cargo.sender.id;
+  
+  // Debug logging
+  console.log('🔍 DEBUG CargoDetailsModal:', {
+    userId: user?.id,
+    senderId: cargo?.sender?.id,
+    senderName: cargo?.sender?.name,
+    provider: cargo?.provider,
+    isOwner,
+    cargo: cargo ? {
+      id: cargo.id,
+      sender: cargo.sender
+    } : null
+  });
 
   // Reset state when modal opens/closes
   useEffect(() => {
