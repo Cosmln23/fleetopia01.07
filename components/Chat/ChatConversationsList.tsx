@@ -54,12 +54,12 @@ export default function ChatConversationsList({
 
   // Calculate total unread count
   useEffect(() => {
-    const totalUnread = conversations.reduce((sum, conv) => sum + conv.unreadCount, 0)
+    const totalUnread = Array.isArray(conversations) ? conversations.reduce((sum, conv) => sum + conv.unreadCount, 0) : 0
     onUnreadCountChange(totalUnread)
   }, [conversations, onUnreadCountChange])
 
   // Filter conversations based on search
-  const filteredConversations = conversations.filter(conversation => {
+  const filteredConversations = Array.isArray(conversations) ? conversations.filter(conversation => {
     if (!searchQuery.trim()) return true
     
     const query = searchQuery.toLowerCase()
@@ -70,7 +70,7 @@ export default function ChatConversationsList({
       conversation.cargoTitle?.toLowerCase().includes(query) ||
       conversation.lastMessage?.content.toLowerCase().includes(query)
     )
-  })
+  }) : []
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp)
@@ -130,7 +130,7 @@ export default function ChatConversationsList({
       <div className="flex-1 overflow-y-auto">
         {filteredConversations.length === 0 ? (
           <div className="p-6 text-center">
-            {conversations.length === 0 ? (
+            {!Array.isArray(conversations) || conversations.length === 0 ? (
               <div>
                 <svg className="w-12 h-12 text-[#4d4d4d] mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
