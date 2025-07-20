@@ -32,10 +32,10 @@ export default function GlobalChatWidget({ className = '' }: GlobalChatWidgetPro
     }
   }, [])
 
-  // Don't render if user not loaded or not authenticated
-  if (!isLoaded || !user) {
-    return null
-  }
+  // Remove the condition that hides the widget if no user
+  // if (!isLoaded || !user) {
+  //   return null
+  // }
 
   const handleConversationSelect = (conversationId: string) => {
     setSelectedConversationId(conversationId)
@@ -56,7 +56,14 @@ export default function GlobalChatWidget({ className = '' }: GlobalChatWidgetPro
       <div className={`fixed bottom-4 right-4 z-50 ${className}`}>
         {!isOpen && (
           <button
-            onClick={() => setIsOpen(true)}
+            onClick={() => {
+              if (!user) {
+                // Redirect to sign-in or show prompt
+                window.location.href = '/sign-in'
+              } else {
+                setIsOpen(true)
+              }
+            }}
             className="relative bg-blue-600 hover:bg-blue-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-105"
             aria-label="Open chat"
           >
@@ -76,7 +83,7 @@ export default function GlobalChatWidget({ className = '' }: GlobalChatWidgetPro
       </div>
 
       {/* Chat Window - Overlay */}
-      {isOpen && (
+      {isOpen && user && (
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-end justify-end z-50 p-4">
           {/* Chat Container */}
           <div className="bg-[#1a1a1a] rounded-lg border border-[#363636] w-full max-w-md h-[600px] max-h-[80vh] flex flex-col overflow-hidden shadow-2xl">
@@ -124,6 +131,18 @@ export default function GlobalChatWidget({ className = '' }: GlobalChatWidgetPro
                 />
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* If not user and isOpen (though we redirect, just in case) */}
+      {isOpen && !user && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1a1a1a] rounded-lg p-6 text-center">
+            <p className="text-white mb-4">Please sign in to use chat</p>
+            <button onClick={() => window.location.href = '/sign-in'} className="bg-blue-600 px-4 py-2 rounded text-white">
+              Sign In
+            </button>
           </div>
         </div>
       )}
