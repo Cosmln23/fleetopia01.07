@@ -94,6 +94,16 @@ export default function MarketplacePage() {
     }
   )
   const hasUserCargo = userCargoResponse?.cargo?.length > 0
+  
+  // Debug console pentru buttons
+  console.log('🔍 Button Debug:', {
+    isLoaded,
+    userId, 
+    role,
+    hasUserCargo,
+    userCargoLength: userCargoResponse?.cargo?.length || 0,
+    userCargoResponse
+  })
 
   const handleAddCargo = async (cargoData: Omit<CargoOffer, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
@@ -205,7 +215,7 @@ export default function MarketplacePage() {
           </div>
           <div className="flex items-center gap-3">
             {/* Delete Cargo Button - Only show if user has cargo and is provider */}
-            {hasUserCargo && role === 'provider' && (
+            {isLoaded && hasUserCargo && role === 'provider' && (
               <button 
                 onClick={() => {
                   setIsDeleteModalOpen(true)
@@ -222,8 +232,8 @@ export default function MarketplacePage() {
               </button>
             )}
             
-            {/* Add Cargo Button - Only show for providers */}
-            {role === 'provider' && (
+            {/* Add Cargo Button - Always visible */}
+            {isLoaded && (
               <button 
                 onClick={() => {
                   setIsModalOpen(true)
