@@ -37,23 +37,7 @@ export default function CargoDetailsModal({
 
   // Check if current user is the cargo owner
   // Use provider name or user full name comparison since sender might not be populated
-  const isOwner = Boolean(
-    user && cargo && (
-      cargo.provider === user.fullName ||
-      cargo.provider === `${user.firstName} ${user.lastName}`.trim() ||
-      (cargo.sender && user.id === cargo.sender.id)
-    )
-  )
-
-  // Debug logging
-  console.log('🔍 Delete button debug:', {
-    hasUser: !!user,
-    hasCargo: !!cargo,
-    userFullName: user?.fullName,
-    userFirstLast: user ? `${user.firstName} ${user.lastName}`.trim() : null,
-    cargoProvider: cargo?.provider,
-    isOwner
-  })
+  const isOwner = user && cargo && cargo.sender && user.id === cargo.sender.id;
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -77,6 +61,16 @@ export default function CargoDetailsModal({
     try {
       const price = customPrice ? parseFloat(customPrice) : suggestedPrice
       await onSendQuote(cargo.id, price)
+      // Send auto-message to chat
+      if (cargo.sender?.id) {
+        const conversationId = await startChatWithCargoOwner(cargo.id, cargo.provider, cargo.sender.id);
+        if (conversationId) {
+          await fetch(`/api/chat/conversations/${conversationId}/messages`, {
+            method: 'POST',
+            body: JSON.stringify({ content: `Quote trimis: €${price}`, type: 'quote' })
+          });
+        }
+      }
       setNegotiationStatus('quote_sent')
       setShowChat(true) // Auto-open chat after quote sent
       setCustomPrice('') // Clear input
@@ -391,43 +385,27 @@ export default function CargoDetailsModal({
             
             <button
               onClick={async () => {
-                if (!isOwner && cargo.sender?.id) {
-                  // For non-owners, create global conversation
-                  const conversationId = await startChatWithCargoOwner(
-                    cargo.id,
-                    cargo.provider,
-                    cargo.sender.id
-                  )
-                  if (conversationId) {
-                    // Close modal and let global chat widget handle the conversation
-                    onClose()
-                    // Trigger global chat to open this conversation
-                    window.dispatchEvent(new CustomEvent('openGlobalChat', { 
-                      detail: { conversationId } 
-                    }))
-                  }
-                } else {
-                  // For owners, toggle local chat panel
-                  setShowChat(!showChat)
+                if (!user || !cargo || !cargo.sender?.id) return;
+                if (isOwner) {
+                  // Prevent self-chat
+                  alert('Nu poți vorbi cu tine însuți!');
+                  return;
+                }
+                const conversationId = await startChatWithCargoOwner(
+                  cargo.id,
+                  cargo.provider,
+                  cargo.sender.id
+                );
+                if (conversationId) {
+                  onClose();
+                  window.dispatchEvent(new CustomEvent('openGlobalChat', { detail: { conversationId } }));
                 }
               }}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
             >
-              {isOwner ? 'View Messages' : 'Chat with shipper'}
+              {isOwner ? 'View Messages' : 'Chat with Shipper'}
             </button>
           </div>
-
-          {/* Chat Panel - Collapsible */}
-          {showChat && (
-            <div className="border-t border-[#363636] pt-6">
-              <ChatPanel 
-                cargoId={cargo.id} 
-                onQuoteSent={handleQuoteSentFromChat}
-                suggestedPrice={suggestedPrice}
-                isOwner={isOwner}
-              />
-            </div>
-          )}
         </div>
       </div>
     </div>
