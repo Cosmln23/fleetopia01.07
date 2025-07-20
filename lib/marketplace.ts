@@ -317,34 +317,73 @@ export async function createCargo(cargoData: Omit<Cargo, 'id' | 'created_ts' | '
     const cargoId = `cargo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     const now = Date.now()
     
-    const result = await query(`
-      INSERT INTO cargo (
-        id, title, type, urgency, weight, volume,
-        from_addr, from_country, from_postal, from_city,
-        to_addr, to_country, to_postal, to_city,
-        from_lat, from_lng, to_lat, to_lng,
-        load_date, delivery_date, price, price_per_kg,
-        provider_name, provider_status, status,
-        created_ts, updated_ts, posting_date, sender_id
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6,
-        $7, $8, $9, $10,
-        $11, $12, $13, $14,
-        $15, $16, $17, $18,
-        $19, $20, $21, $22,
-        $23, $24, 'NEW',
-        $25, $26, $27, $28
-      ) RETURNING *
-    `, [
-      cargoId, validatedData.title, validatedData.type, validatedData.urgency, 
-      validatedData.weight, validatedData.volume,
-      validatedData.from_addr, validatedData.from_country, validatedData.from_postal, validatedData.from_city,
-      validatedData.to_addr, validatedData.to_country, validatedData.to_postal, validatedData.to_city,
-      validatedData.from_lat, validatedData.from_lng, validatedData.to_lat, validatedData.to_lng,
-      validatedData.load_date, validatedData.delivery_date, validatedData.price, validatedData.price_per_kg,
-      validatedData.provider_name, validatedData.provider_status,
-      now, now, new Date().toISOString().split('T')[0], (validatedData as any).sender_id
-    ])
+    // Try to insert with sender_id, fallback without it if column doesn't exist
+    let result
+    try {
+      result = await query(`
+        INSERT INTO cargo (
+          id, title, type, urgency, weight, volume,
+          from_addr, from_country, from_postal, from_city,
+          to_addr, to_country, to_postal, to_city,
+          from_lat, from_lng, to_lat, to_lng,
+          load_date, delivery_date, price, price_per_kg,
+          provider_name, provider_status, status,
+          created_ts, updated_ts, posting_date, sender_id
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6,
+          $7, $8, $9, $10,
+          $11, $12, $13, $14,
+          $15, $16, $17, $18,
+          $19, $20, $21, $22,
+          $23, $24, 'NEW',
+          $25, $26, $27, $28
+        ) RETURNING *
+      `, [
+        cargoId, validatedData.title, validatedData.type, validatedData.urgency, 
+        validatedData.weight, validatedData.volume,
+        validatedData.from_addr, validatedData.from_country, validatedData.from_postal, validatedData.from_city,
+        validatedData.to_addr, validatedData.to_country, validatedData.to_postal, validatedData.to_city,
+        validatedData.from_lat, validatedData.from_lng, validatedData.to_lat, validatedData.to_lng,
+        validatedData.load_date, validatedData.delivery_date, validatedData.price, validatedData.price_per_kg,
+        validatedData.provider_name, validatedData.provider_status,
+        now, now, new Date().toISOString().split('T')[0], (validatedData as any).sender_id
+      ])
+    } catch (error: any) {
+      // Fallback for when sender_id column doesn't exist yet
+      if (error.code === '42703') {
+        console.log('⚠️ sender_id column not found, using fallback insert')
+        result = await query(`
+          INSERT INTO cargo (
+            id, title, type, urgency, weight, volume,
+            from_addr, from_country, from_postal, from_city,
+            to_addr, to_country, to_postal, to_city,
+            from_lat, from_lng, to_lat, to_lng,
+            load_date, delivery_date, price, price_per_kg,
+            provider_name, provider_status, status,
+            created_ts, updated_ts, posting_date
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6,
+            $7, $8, $9, $10,
+            $11, $12, $13, $14,
+            $15, $16, $17, $18,
+            $19, $20, $21, $22,
+            $23, $24, 'NEW',
+            $25, $26, $27
+          ) RETURNING *
+        `, [
+          cargoId, validatedData.title, validatedData.type, validatedData.urgency, 
+          validatedData.weight, validatedData.volume,
+          validatedData.from_addr, validatedData.from_country, validatedData.from_postal, validatedData.from_city,
+          validatedData.to_addr, validatedData.to_country, validatedData.to_postal, validatedData.to_city,
+          validatedData.from_lat, validatedData.from_lng, validatedData.to_lat, validatedData.to_lng,
+          validatedData.load_date, validatedData.delivery_date, validatedData.price, validatedData.price_per_kg,
+          validatedData.provider_name, validatedData.provider_status,
+          now, now, new Date().toISOString().split('T')[0]
+        ])
+      } else {
+        throw error
+      }
+    }
     
     console.log('✅ Marketplace: createCargo success', { cargoId })
     return result.rows[0]

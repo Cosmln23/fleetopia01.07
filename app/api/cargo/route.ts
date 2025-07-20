@@ -80,25 +80,54 @@ export async function GET(req: NextRequest) {
     let senderInfo: Record<string, any> = {}
     
     if (cargoIds.length > 0) {
-      const senderResult = await query(`
-        SELECT c.id as cargo_id, u.clerk_id, u.name, u.email, u.avatar, u.company, u.verified, u.rating
-        FROM cargo c
-        LEFT JOIN users u ON c.sender_id = u.clerk_id OR u.name = c.provider_name
-        WHERE c.id = ANY($1)
-      `, [cargoIds])
-      
-      senderInfo = senderResult.rows.reduce((acc: Record<string, any>, row: any) => {
-        acc[row.cargo_id] = {
-          id: row.clerk_id,
-          name: row.name,
-          email: row.email,
-          avatar: row.avatar,
-          company: row.company,
-          verified: row.verified || false,
-          rating: row.rating || 0
+      try {
+        // Try with sender_id first (if column exists)
+        const senderResult = await query(`
+          SELECT c.id as cargo_id, u.clerk_id, u.name, u.email, u.avatar, u.company, u.verified, u.rating
+          FROM cargo c
+          LEFT JOIN users u ON c.sender_id = u.clerk_id OR u.name = c.provider_name
+          WHERE c.id = ANY($1)
+        `, [cargoIds])
+        
+        senderInfo = senderResult.rows.reduce((acc: Record<string, any>, row: any) => {
+          acc[row.cargo_id] = {
+            id: row.clerk_id,
+            name: row.name,
+            email: row.email,
+            avatar: row.avatar,
+            company: row.company,
+            verified: row.verified || false,
+            rating: row.rating || 0
+          }
+          return acc
+        }, {})
+      } catch (error: any) {
+        // Fallback for when sender_id column doesn't exist yet
+        if (error.code === '42703') {
+          console.log('⚠️ sender_id column not found, using fallback')
+          const senderResult = await query(`
+            SELECT c.id as cargo_id, u.clerk_id, u.name, u.email, u.avatar, u.company, u.verified, u.rating
+            FROM cargo c
+            LEFT JOIN users u ON u.name = c.provider_name
+            WHERE c.id = ANY($1)
+          `, [cargoIds])
+          
+          senderInfo = senderResult.rows.reduce((acc: Record<string, any>, row: any) => {
+            acc[row.cargo_id] = {
+              id: row.clerk_id,
+              name: row.name,
+              email: row.email,
+              avatar: row.avatar,
+              company: row.company,
+              verified: row.verified || false,
+              rating: row.rating || 0
+            }
+            return acc
+          }, {})
+        } else {
+          throw error
         }
-        return acc
-      }, {})
+      }
     }
 
     // Transform to maintain backward compatibility
