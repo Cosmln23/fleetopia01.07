@@ -32,7 +32,7 @@ export async function GET() {
           AND cm.read = false
         ) as unread_count,
         (
-          SELECT json_build_object(
+          SELECT jsonb_build_object(
             'id', cm.id,
             'senderId', cm.sender_id,
             'content', cm.content,
